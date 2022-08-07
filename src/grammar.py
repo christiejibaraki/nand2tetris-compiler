@@ -1,0 +1,49 @@
+"""
+Lexical elements of Jack language
+"""
+
+KEYWORD_TAG = "keyword"
+IDENTIFIER_TAG = "identifier"
+SYMBOL_TAG = "symbol"
+STRING_CONSTANT_TAG = "stringConstant"
+INTEGER_CONSTANT_TAG = "integerConstant"
+
+SYMBOLS = {'{', '}',
+           '(', ')',
+           '[', ']',
+           '.', ',', ';',
+           '+', '-', '*', '/',
+           '&', '|', '<', '>', '=', '~'
+           }
+
+KEYWORDS = {'class',
+            'constructor',
+            'function',
+            'method',
+            'field',
+            'static',
+            'var',
+            'int',
+            'char',
+            'boolean',
+            'void',
+            'true',
+            'false',
+            'null',
+            'this',
+            'let',
+            'do',
+            'if',
+            'else',
+            'while',
+            'return'}
+
+
+def create_tag(tag_type, token):
+    """
+    Create start and end tags for token
+    :param tag_type: (str) tag
+    :param token: (str) token tag
+    :return: (str) tagged token: "<type> token </type>"
+    """
+    return f"<{tag_type}> {token} </{tag_type}>"
