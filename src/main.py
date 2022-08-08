@@ -1,7 +1,6 @@
 """
 Main module
-Runs first part of compiler
-Translates .jack files
+Runs first part of compiler, the Jack "Analyzer"
 """
 import sys
 import os
@@ -35,6 +34,5 @@ if __name__ == "__main__":
             output = translate_file(os.path.join(path, filename))
             out_filename = name + "_T.xml"
             out_file_path = os.path.join(path, out_filename)
-            print(output)
             write_file(out_file_path, output)
             print(f"*** Writing output file {out_filename} to {path}")
