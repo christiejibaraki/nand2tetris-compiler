@@ -6,7 +6,7 @@ from grammar_utility import \
     KEYWORD_TAG, IDENTIFIER_TAG, SYMBOL_TAG, STRING_CONSTANT_TAG, INTEGER_CONSTANT_TAG, \
     SYMBOLS, KEYWORDS
 from grammar_utility import SUBROUTINE_OR_CLASS_END, SUBROUTINE_DEC_SET, \
-    STATEMENT_OR_ROUTINE_END
+    STATEMENT_OR_ROUTINE_END, TERM_OPS, KEYWORD_CONSTANT, UNARY_OP
 
 
 class CompilationEngine:
@@ -250,22 +250,8 @@ class CompilationEngine:
         # guaranteed to be do
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
         self.tokenizer.next()
-        # expect a subroutine name OR (class or variable name)
-        output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "identifier",
-                                                      new_offset)
-        # if previous token was a class or variable name
-        # next tokens should be "." and a subroutine name
-        if self.tokenizer.current_token() == ".":
-            output_str += new_offset + self.tokenizer.current_tag() + "\n"
-            self.tokenizer.next()
-            output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "identifier",
-                                                          new_offset)
-        # expect "(", followed by an expression list, and ")"
-        output_str += self._validate_token_and_advance({"("}, "(", new_offset)
-        output_str += self._compile_expression_list(new_offset)
-        # guaranteed to be )
-        output_str += new_offset + self.tokenizer.current_tag() + "\n"
-        self.tokenizer.next()
+        # subroutine call
+        output_str += self._compile_subroutine_call(new_offset)
         # expect ;
         output_str += self._validate_token_and_advance({";"}, ";", new_offset)
 
@@ -292,12 +278,12 @@ class CompilationEngine:
         if self.tokenizer.current_token() == "[":
             output_str += new_offset + self.tokenizer.current_tag() + "\n"
             self.tokenizer.next()
-            output_str += self._compile_expression()
+            output_str += self._compile_expression({"]"})
             output_str += self._validate_token_and_advance({"]"}, "]", new_offset)
         # expect "="
         output_str += self._validate_token_and_advance({"="}, "=", new_offset)
         # expect expression
-        output_str += self._compile_expression(new_offset)
+        output_str += self._compile_expression(new_offset, {";"})
         # expect ;
         output_str += self._validate_token_and_advance({";"}, ";", new_offset)
 
@@ -320,7 +306,7 @@ class CompilationEngine:
         # expect (
         output_str += self._validate_token_and_advance({"("}, ")", new_offset)
         # expression
-        output_str += self._compile_expression(new_offset)
+        output_str += self._compile_expression(new_offset, {")"})
         # expect )
         output_str += self._validate_token_and_advance({")"}, ")", new_offset)
         # expect {
@@ -349,7 +335,7 @@ class CompilationEngine:
         self.tokenizer.next()
         # if not empty return, expression
         if self.tokenizer.current_token() != ";":
-            output_str += self._compile_expression(new_offset)
+            output_str += self._compile_expression(new_offset, {";"})
         # expect ;
         output_str += self._validate_token_and_advance({";"}, ";", new_offset)
 
@@ -372,7 +358,7 @@ class CompilationEngine:
         # expect (
         output_str += self._validate_token_and_advance({"("}, ")", new_offset)
         # expression
-        output_str += self._compile_expression(new_offset)
+        output_str += self._compile_expression(new_offset, {")"})
         # expect )
         output_str += self._validate_token_and_advance({")"}, ")", new_offset)
         # expect {
@@ -416,22 +402,30 @@ class CompilationEngine:
             if self.tokenizer.current_token() == ",":
                 output_str += self._validate_token_and_advance({","}, ",", new_offset)
                 continue
-            output_str += self._compile_expression(new_offset)
+            output_str += self._compile_expression(new_offset, {",", ")"})
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
-    def _compile_expression(self, current_offset):
+    def _compile_expression(self, current_offset, stop_chars):
         """
         Compiles an expression.
         :param current_offset: (str) tab for parent tag
+        :param stop_char: {str} set of characters that ends expression
         :return: (str) xml
         """
         current_tag = "expression"
         output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + "\t"
 
-        output_str += self._compile_term(new_offset)
+        if self.tokenizer.current_token() != self:
+            output_str += self._compile_term(new_offset)
+            # check for other terms
+            while self.tokenizer.current_token() not in stop_chars:
+                # expect op
+                output_str += self._validate_token_and_advance(TERM_OPS, "operator", new_offset)
+                # followed by a term
+                output_str += self._compile_term(new_offset)
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
@@ -450,10 +444,33 @@ class CompilationEngine:
         output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + "\t"
 
-        # TODO update
-        # for expression less square dance
-        output_str += self._validate_type_and_advance({IDENTIFIER_TAG, KEYWORD_TAG},
-                                                      "identifier or keyword", new_offset)
+        # Unambigious cases 1-4
+        # (1) integer or string constant type, (2) keyword constant, (3) unary op
+        if (self.tokenizer.current_type() in {INTEGER_CONSTANT_TAG, STRING_CONSTANT_TAG}) \
+            or (self.tokenizer.current_token() in KEYWORD_CONSTANT) \
+            or (self.tokenizer.current_token() in UNARY_OP):
+            output_str += new_offset + self.tokenizer.current_tag() + "\n"
+            self.tokenizer.next()
+        # (4) if char is "(" then expect ( expression )
+        elif self.tokenizer.current_token() == "(":
+            # write (
+            output_str += new_offset + self.tokenizer.current_tag() + "\n"
+            self.tokenizer.next()
+            output_str += self._compile_expression({")"})
+            # write )
+            output_str += new_offset + self.tokenizer.current_tag() + "\n"
+            self.tokenizer.next()
+        # otherwise need to distinguish between:
+        #  variable, an array entry, and a subroutine call
+        else:
+            # expect an identifier
+            output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "identifier", new_offset)
+            # subroutine
+            if self.tokenizer.current_token() == "(":
+                pass
+            # array entry
+            elif self.tokenizer.current_token() == "[":
+                pass
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
@@ -541,4 +558,33 @@ class CompilationEngine:
         # guaranteed to be ;
         output_str += offset + self.tokenizer.current_tag() + "\n"
         self.tokenizer.next()
+        return output_str
+
+    def _compile_subroutine_call(self, offset):
+        """
+        Compiles pattern
+        subroutineName '(' expressionList ')' OR
+        ( className | varName) '.' subroutineName '(' expressionList ')'
+        Helper function for do statment and term
+        :param offset:
+        :return:
+        """
+        output_str = ""
+        # expect a subroutine name OR (class or variable name)
+        output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "identifier",
+                                                      offset)
+        # if previous token was a class or variable name
+        # next tokens should be "." and a subroutine name
+        if self.tokenizer.current_token() == ".":
+            output_str += offset + self.tokenizer.current_tag() + "\n"
+            self.tokenizer.next()
+            output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "identifier",
+                                                          offset)
+        # expect "(", followed by an expression list, and ")"
+        output_str += self._validate_token_and_advance({"("}, "(", offset)
+        output_str += self._compile_expression_list(offset)
+        # guaranteed to be )
+        output_str += offset + self.tokenizer.current_tag() + "\n"
+        self.tokenizer.next()
+
         return output_str

@@ -75,6 +75,16 @@ class Tokenizer:
         """
         return self.__current_xml
 
+    def look_ahead_token(self):
+        """
+        See next token tuple
+        :return: (str, str, str) the next token, type, and tag
+        """
+        try:
+            return self.__token_type_list[self.__token_pointer + 1]
+        except IndexError:
+            raise IndexError("Reached end of token input")
+
     def _find_string_literals(self):
         """
         Finds string literals
