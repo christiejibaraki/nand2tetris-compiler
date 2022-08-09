@@ -278,7 +278,7 @@ class CompilationEngine:
         if self.tokenizer.current_token() == "[":
             output_str += new_offset + self.tokenizer.current_tag() + "\n"
             self.tokenizer.next()
-            output_str += self._compile_expression({"]"})
+            output_str += self._compile_expression(new_offset, {"]"})
             output_str += self._validate_token_and_advance({"]"}, "]", new_offset)
         # expect "="
         output_str += self._validate_token_and_advance({"="}, "=", new_offset)
@@ -445,18 +445,23 @@ class CompilationEngine:
         new_offset = current_offset + "\t"
 
         # Unambigious cases 1-4
-        # (1) integer or string constant type, (2) keyword constant, (3) unary op
+        # (1) integer or string constant type, (2) keyword constant
         if (self.tokenizer.current_type() in {INTEGER_CONSTANT_TAG, STRING_CONSTANT_TAG}) \
-            or (self.tokenizer.current_token() in KEYWORD_CONSTANT) \
-            or (self.tokenizer.current_token() in UNARY_OP):
+            or (self.tokenizer.current_token() in KEYWORD_CONSTANT):
             output_str += new_offset + self.tokenizer.current_tag() + "\n"
             self.tokenizer.next()
-        # (4) if char is "(" then expect ( expression )
+        # (3) unary operator followed by term
+        elif self.tokenizer.current_token() in UNARY_OP:
+            # write operator
+            output_str += new_offset + self.tokenizer.current_tag() + "\n"
+            self.tokenizer.next()
+            output_str += self._compile_term(new_offset)
+        # (4) if char is "(" then expect: ( expression )
         elif self.tokenizer.current_token() == "(":
             # write (
             output_str += new_offset + self.tokenizer.current_tag() + "\n"
             self.tokenizer.next()
-            output_str += self._compile_expression({")"})
+            output_str += self._compile_expression(new_offset, {")"})
             # write )
             output_str += new_offset + self.tokenizer.current_tag() + "\n"
             self.tokenizer.next()
@@ -464,13 +469,26 @@ class CompilationEngine:
         #  variable, an array entry, and a subroutine call
         else:
             # expect an identifier
-            output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "identifier", new_offset)
+            if self.tokenizer.current_type() != IDENTIFIER_TAG:
+                raise ValueError(f"Expecting identifer, actual {self.tokenizer.current_type()}")
+            # look ahead
+            next_token, _, _ = self.tokenizer.look_ahead_token()
             # subroutine
-            if self.tokenizer.current_token() == "(":
-                pass
-            # array entry
-            elif self.tokenizer.current_token() == "[":
-                pass
+            if next_token in {"(", "."}:
+                output_str += self._compile_subroutine_call(new_offset)
+            # variable name OR array entry
+            else:
+                output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "identifier", new_offset)
+                # array entry
+                if self.tokenizer.current_token() == "[":
+                    # write [
+                    output_str += new_offset + self.tokenizer.current_tag() + "\n"
+                    self.tokenizer.next()
+                    # expression
+                    output_str += self._compile_expression(new_offset, {"]"})
+                    # write ]
+                    output_str += new_offset + self.tokenizer.current_tag() + "\n"
+                    self.tokenizer.next()
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
@@ -496,8 +514,9 @@ class CompilationEngine:
             return out
 
         error_message = f"Expecting {error_message_input}, actual: " \
-                        f"{self.tokenizer.current_type()}: " \
-                        f"{self.tokenizer.current_token()}"
+                        f"({self.tokenizer.current_type()}) " \
+                        f"{self.tokenizer.current_token()}." \
+                        f" Current pointer value: {self.tokenizer.get_value_of_pointer()}"
 
         raise ValueError(error_message)
 

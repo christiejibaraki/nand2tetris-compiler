@@ -164,5 +164,8 @@ class Tokenizer:
     def get_token_type_list(self):
         return self.__token_type_list
 
+    def get_value_of_pointer(self):
+        return self.__token_pointer
+
     def get_xml(self):
         return "<tokens>\n" + self.__xml + "</tokens>\n"
