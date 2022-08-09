@@ -125,7 +125,9 @@ class Tokenizer:
                 xml_tag = create_tag(KEYWORD_TAG, token)
                 token_type = KEYWORD_TAG
             elif token in SYMBOLS:
-                token = "&lt;" if token == "<" else ("&gt;" if token == ">" else ("&amp;" if token == "&" else token))
+                token = "&lt;" if token == "<" else (
+                        "&gt;" if token == ">" else (
+                        "&amp;" if token == "&" else token))
                 xml_tag = create_tag(SYMBOL_TAG, token)
                 token_type = SYMBOL_TAG
             elif token == Tokenizer.STRING_LITERAL_SUB:
@@ -150,22 +152,43 @@ class Tokenizer:
     Getters
     """
     def get_input_str(self):
+        """
+        :return: (str) the orig input
+        """
         return self.__input_string
 
     def get_string_literals_list(self):
+        """
+        :return: [str] list of string literals
+        """
         return self.__string_literals
 
     def get_padded_str(self):
+        """
+        :return: (str) input with white space padded operators
+        """
         return self.__padded_string
 
     def get_tokens(self):
+        """
+        :return: [str] list of tokens
+        """
         return self.__tokens
 
     def get_token_type_list(self):
+        """
+        :return: [(str, str, str)] list of token tuples
+        """
         return self.__token_type_list
 
     def get_value_of_pointer(self):
+        """
+        :return: (int) value of pointer
+        """
         return self.__token_pointer
 
     def get_xml(self):
+        """
+        :return: (str) xml of tokens (not parsed)
+        """
         return "<tokens>\n" + self.__xml + "</tokens>\n"

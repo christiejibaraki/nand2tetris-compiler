@@ -3,10 +3,11 @@ Compilation Engine Module
 """
 from tokenizer import Tokenizer
 from grammar_utility import \
-    KEYWORD_TAG, IDENTIFIER_TAG, SYMBOL_TAG, STRING_CONSTANT_TAG, INTEGER_CONSTANT_TAG, \
-    SYMBOLS, KEYWORDS
+    KEYWORD_TAG, IDENTIFIER_TAG, STRING_CONSTANT_TAG, INTEGER_CONSTANT_TAG
 from grammar_utility import SUBROUTINE_OR_CLASS_END, SUBROUTINE_DEC_SET, \
     STATEMENT_OR_ROUTINE_END, TERM_OPS, KEYWORD_CONSTANT, UNARY_OP
+
+OFFSET_CHAR = "  "
 
 
 class CompilationEngine:
@@ -45,7 +46,7 @@ class CompilationEngine:
         """
         current_tag = "class"
         output_str = f"<{current_tag}>\n"
-        current_offset = "\t"
+        current_offset = OFFSET_CHAR
         output_str += self._validate_token_and_advance(
             {"class"}, "keyword class", current_offset)
 
@@ -57,7 +58,7 @@ class CompilationEngine:
         output_str += self._validate_token_and_advance({"{"}, "{", current_offset)
 
         # optional class variable declarations
-        while not (self.tokenizer.current_token() in SUBROUTINE_OR_CLASS_END):
+        while not self.tokenizer.current_token() in SUBROUTINE_OR_CLASS_END:
             if self.tokenizer.current_token() in {"static", "field"}:
                 output_str += self._compile_class_var_dec(current_offset)
 
@@ -83,7 +84,7 @@ class CompilationEngine:
         """
         current_tag = "classVarDec"
         output_str = current_offset + f"<{current_tag}>" + "\n"
-        new_offset = current_offset + "\t"
+        new_offset = current_offset + OFFSET_CHAR
 
         # guaranteed to be static or field
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -102,7 +103,7 @@ class CompilationEngine:
         """
         current_tag = "subroutineDec"
         output_str = current_offset + f"<{current_tag}>" + "\n"
-        new_offset = current_offset + "\t"
+        new_offset = current_offset + OFFSET_CHAR
 
         # guaranteed to be constructor, function, or method
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -140,7 +141,7 @@ class CompilationEngine:
         """
         current_tag = "parameterList"
         output_str = current_offset + f"<{current_tag}>" + "\n"
-        new_offset = current_offset + "\t"
+        new_offset = current_offset + OFFSET_CHAR
 
         while self.tokenizer.current_token() != ")":
             if self.tokenizer.current_token() == ",":
@@ -162,7 +163,7 @@ class CompilationEngine:
         """
         current_tag = "subroutineBody"
         output_str = current_offset + f"<{current_tag}>" + "\n"
-        new_offset = current_offset + "\t"
+        new_offset = current_offset + OFFSET_CHAR
 
         # guaranteed to be "{"
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -174,7 +175,7 @@ class CompilationEngine:
 
         # compile any statements
         while self.tokenizer.current_token() != "}":
-            output_str += self._compile_statements(current_offset)
+            output_str += self._compile_statements(new_offset)
 
         # guaranteed to be "}"
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -191,7 +192,7 @@ class CompilationEngine:
         """
         current_tag = "varDec"
         output_str = current_offset + f"<{current_tag}>" + "\n"
-        new_offset = current_offset + "\t"
+        new_offset = current_offset + OFFSET_CHAR
 
         # guaranteed to be var
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -213,7 +214,7 @@ class CompilationEngine:
         """
         current_tag = "statements"
         output_str = current_offset + f"<{current_tag}>" + "\n"
-        new_offset = current_offset + "\t"
+        new_offset = current_offset + OFFSET_CHAR
 
         while self.tokenizer.current_token() != "}":
             current_token = self.tokenizer.current_token()
@@ -245,7 +246,7 @@ class CompilationEngine:
         """
         current_tag = "doStatement"
         output_str = current_offset + f"<{current_tag}>" + "\n"
-        new_offset = current_offset + "\t"
+        new_offset = current_offset + OFFSET_CHAR
 
         # guaranteed to be do
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -266,7 +267,7 @@ class CompilationEngine:
         """
         current_tag = "letStatement"
         output_str = current_offset + f"<{current_tag}>" + "\n"
-        new_offset = current_offset + "\t"
+        new_offset = current_offset + OFFSET_CHAR
 
         # guaranteed to be let
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -298,7 +299,7 @@ class CompilationEngine:
         """
         current_tag = "whileStatement"
         output_str = current_offset + f"<{current_tag}>" + "\n"
-        new_offset = current_offset + "\t"
+        new_offset = current_offset + OFFSET_CHAR
 
         # guaranteed to be while
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -328,7 +329,7 @@ class CompilationEngine:
         """
         current_tag = "returnStatement"
         output_str = current_offset + f"<{current_tag}>" + "\n"
-        new_offset = current_offset + "\t"
+        new_offset = current_offset + OFFSET_CHAR
 
         # guaranteed to be return
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -350,7 +351,7 @@ class CompilationEngine:
         """
         current_tag = "ifStatement"
         output_str = current_offset + f"<{current_tag}>" + "\n"
-        new_offset = current_offset + "\t"
+        new_offset = current_offset + OFFSET_CHAR
 
         # guaranteed to be if
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -395,7 +396,7 @@ class CompilationEngine:
         """
         current_tag = "expressionList"
         output_str = current_offset + f"<{current_tag}>" + "\n"
-        new_offset = current_offset + "\t"
+        new_offset = current_offset + OFFSET_CHAR
 
         # compile expressions until hit ")"
         while self.tokenizer.current_token() != ")":
@@ -416,7 +417,7 @@ class CompilationEngine:
         """
         current_tag = "expression"
         output_str = current_offset + f"<{current_tag}>" + "\n"
-        new_offset = current_offset + "\t"
+        new_offset = current_offset + OFFSET_CHAR
 
         if self.tokenizer.current_token() != self:
             output_str += self._compile_term(new_offset)
@@ -442,7 +443,7 @@ class CompilationEngine:
         """
         current_tag = "term"
         output_str = current_offset + f"<{current_tag}>" + "\n"
-        new_offset = current_offset + "\t"
+        new_offset = current_offset + OFFSET_CHAR
 
         # Unambigious cases 1-4
         # (1) integer or string constant type, (2) keyword constant
@@ -478,7 +479,8 @@ class CompilationEngine:
                 output_str += self._compile_subroutine_call(new_offset)
             # variable name OR array entry
             else:
-                output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "identifier", new_offset)
+                output_str += self._validate_type_and_advance({IDENTIFIER_TAG},
+                                                              "identifier", new_offset)
                 # array entry
                 if self.tokenizer.current_token() == "[":
                     # write [
@@ -573,7 +575,8 @@ class CompilationEngine:
                 output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "variable name",
                                                               offset)
             else:
-                raise ValueError(f"Expecting variable name, actual: {self.tokenizer.current_token()}")
+                raise ValueError(
+                    f"Expecting variable name, actual: {self.tokenizer.current_token()}")
         # guaranteed to be ;
         output_str += offset + self.tokenizer.current_tag() + "\n"
         self.tokenizer.next()
