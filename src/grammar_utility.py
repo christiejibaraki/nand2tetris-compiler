@@ -12,6 +12,7 @@ INTEGER_CONSTANT_TAG = "integerConstant"
 Constants for compilation engine
 """
 SUBROUTINE_DEC_SET = {"constructor", "function", "method"}
+SUBROUTINE_OR_CLASS_END = {"constructor", "function", "method", "}"}
 
 SYMBOLS = {'{', '}',
            '(', ')',
