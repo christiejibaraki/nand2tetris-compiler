@@ -8,6 +8,11 @@ SYMBOL_TAG = "symbol"
 STRING_CONSTANT_TAG = "stringConstant"
 INTEGER_CONSTANT_TAG = "integerConstant"
 
+"""
+Constants for compilation engine
+"""
+SUBROUTINE_DEC_SET = {"constructor", "function", "method"}
+
 SYMBOLS = {'{', '}',
            '(', ')',
            '[', ']',

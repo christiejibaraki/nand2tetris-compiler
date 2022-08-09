@@ -2,7 +2,7 @@
 Tokenizer Module
 """
 import re
-from grammar import create_tag, \
+from grammar_utility import create_tag, \
     KEYWORD_TAG, IDENTIFIER_TAG, SYMBOL_TAG, STRING_CONSTANT_TAG, INTEGER_CONSTANT_TAG, \
     SYMBOLS, KEYWORDS
 
@@ -21,7 +21,7 @@ class Tokenizer:
     def __init__(self, input_string):
         """
         Construct an instance of tokenizer
-        :param input_string: (Str) jack code (comments removed)
+        :param input_string: (str) jack code (comments removed)
         """
 
         self.__input_string = input_string  # original jack code
@@ -37,42 +37,43 @@ class Tokenizer:
         self.__tokens = self.__padded_string.split()
         self._tag_tokens()
 
-        self._token_pointer = None
-
-    def has_more_tokens(self):
-        """
-        Indicates whether there are additional tokens to process
-        :return: Boolean
-        """
-        return True if self._token_pointer < (len(self.__tokens)-1) else False
+        self.__token_pointer = None
+        self.__current_token = None
+        self.__current_type = None
+        self.__current_xml = None
 
     def next(self):
         """
         Advance token pointer
         :return: NA, updates self._token_pointer
         """
-        self._token_pointer = 0 if self._token_pointer is None else (self._token_pointer + 1)
+        self.__token_pointer = 0 if self.__token_pointer is None else (self.__token_pointer + 1)
+        if self.__token_pointer >= len(self.__token_type_list):
+            self.__token_pointer -= 1
+            raise ValueError("Reached end of token input")
+        self.__current_token, self.__current_type, self.__current_xml = \
+            self.__token_type_list[self.__token_pointer]
 
-    def get_current_token(self):
+    def current_token(self):
         """
         Return current token
         :return: (str) token
         """
-        return self.__tokens[self._token_pointer][0]
+        return self.__current_token
 
-    def get_current_token_type(self):
+    def current_type(self):
         """
         Return current token type
         :return: (str) token type
         """
-        return self.__tokens[self._token_pointer][1]
+        return self.__current_type
 
-    def get_current_tag(self):
+    def current_tag(self):
         """
         Return xml for current token
         :return: (str) xml
         """
-        return self.__tokens[self._token_pointer][2]
+        return self.__current_xml
 
     def _find_string_literals(self):
         """

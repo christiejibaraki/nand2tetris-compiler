@@ -4,9 +4,9 @@ Runs first part of compiler, the Jack "Analyzer"
 """
 import sys
 import os
-from utility import read_file, clean_code, write_file
+from io_utility import read_file, clean_code, write_file
 from tokenizer import Tokenizer
-
+from compilation_engine import CompilationEngine
 
 def translate_file(input_file_path):
     """
@@ -16,9 +16,11 @@ def translate_file(input_file_path):
     :return: (str) xml representing syntactic structure of program
     """
     orig_input_str = read_file(input_file_path)
-    clean_input_sr = clean_code(orig_input_str)
-    tokenizer = Tokenizer(clean_input_sr)
-    return tokenizer.get_xml()
+    clean_input_str = clean_code(orig_input_str)
+    # tokenizer = Tokenizer(clean_input_str)
+    # return tokenizer.get_xml()
+    compilation_engine = CompilationEngine(clean_input_str)
+    return compilation_engine.get_output()
 
 
 if __name__ == "__main__":
@@ -32,6 +34,7 @@ if __name__ == "__main__":
         if extension == ".jack":
             print(f"*** Translating {filename}")
             output = translate_file(os.path.join(path, filename))
+            print(output)
             out_filename = name + "_T.xml"
             out_file_path = os.path.join(path, out_filename)
             write_file(out_file_path, output)
