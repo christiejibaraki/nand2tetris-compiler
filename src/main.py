@@ -17,8 +17,6 @@ def analyze_jack_file(input_file_path):
     """
     orig_input_str = read_file(input_file_path)
     clean_input_str = clean_code(orig_input_str)
-    # tokenizer = Tokenizer(clean_input_str)
-    # return tokenizer.get_xml()
     compilation_engine = CompilationEngine(clean_input_str)
     return compilation_engine.get_output()
 
@@ -34,7 +32,7 @@ if __name__ == "__main__":
         if extension == ".jack":
             print(f"*** Translating {filename}")
             output = analyze_jack_file(os.path.join(path, filename))
-            out_filename = name + "_T.xml"
+            out_filename = name + ".xml"
             out_file_path = os.path.join(path, out_filename)
             write_file(out_file_path, output)
             print(f"*** Writing output file {out_filename} to {path}")
