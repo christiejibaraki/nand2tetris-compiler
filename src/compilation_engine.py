@@ -5,7 +5,8 @@ from tokenizer import Tokenizer
 from grammar_utility import \
     KEYWORD_TAG, IDENTIFIER_TAG, SYMBOL_TAG, STRING_CONSTANT_TAG, INTEGER_CONSTANT_TAG, \
     SYMBOLS, KEYWORDS
-from grammar_utility import SUBROUTINE_OR_CLASS_END, SUBROUTINE_DEC_SET
+from grammar_utility import SUBROUTINE_OR_CLASS_END, SUBROUTINE_DEC_SET, \
+    STATEMENT_OR_ROUTINE_END
 
 
 class CompilationEngine:
@@ -63,7 +64,8 @@ class CompilationEngine:
         Compiles a complete class
         :return: (str) xml output
         """
-        output_str = "<class>\n"
+        current_tag = "class"
+        output_str = f"<{current_tag}>\n"
         current_offset = "\t"
         output_str += self._validate_token(self.tokenizer.current_token(),
                                            {"class"}, "keyword class", current_offset)
@@ -87,6 +89,8 @@ class CompilationEngine:
             output_str += self.compile_subroutine(current_offset)
 
         # expect "}"
+
+        output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
     def compile_class_var_dec(self, current_offset):
@@ -95,7 +99,8 @@ class CompilationEngine:
         :param current_offset: (str) tab for parent tag
         :return: (str) xml for class var dec
         """
-        output_str = current_offset + "<classVarDec>" + "\n"
+        current_tag = "classVarDec"
+        output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + "\t"
 
         # guaranteed to be static or field
@@ -127,13 +132,11 @@ class CompilationEngine:
             else:
                 raise ValueError("Expecting variable name")
 
-        # expected ;
-        output_str += self._validate_token(self.tokenizer.current_token(),
-                                           {";"},
-                                           ";",
-                                           new_offset)
+        # guaranteed to be ;
+        output_str += new_offset+ self.tokenizer.current_tag() + "\n"
+        self.tokenizer.next()
 
-        output_str += current_offset + "</classVarDec>" + "\n"
+        output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
     def compile_subroutine(self, current_offset):
@@ -142,48 +145,200 @@ class CompilationEngine:
         :param current_offset: (str) tab for parent tag
         :return: (str) xml for class var dec
         """
-        output_str = current_offset + "<subroutineDec>" + "\n"
-        dec_offset = current_offset + "\t"
+        current_tag = "subroutineDec"
+        output_str = current_offset + f"<{current_tag}>" + "\n"
+        new_offset = current_offset + "\t"
 
         # guaranteed to be constructor, function, or method
-        output_str += dec_offset + self.tokenizer.current_tag() + "\n"
+        output_str += new_offset + self.tokenizer.current_tag() + "\n"
         self.tokenizer.next()
 
         # expect void or type (int, char, boolean, classname)
         output_str += self._validate_token(self.tokenizer.current_type(),
                                            {KEYWORD_TAG, IDENTIFIER_TAG},
                                            "keyword or identifier",
-                                           dec_offset)
+                                           new_offset)
 
         # expect a subroutine name
         output_str += self._validate_token(self.tokenizer.current_type(),
                                            {IDENTIFIER_TAG}, "subroutine name",
-                                           dec_offset)
+                                           new_offset)
 
         # expect (
         output_str += self._validate_token(self.tokenizer.current_token(),
-                                           {"("}, "(", dec_offset)
+                                           {"("}, "(", new_offset)
 
         # parameter list
-        output_str += self.compile_paramater_list(dec_offset)
+        output_str += self.compile_paramater_list(new_offset)
 
         # expect )
         output_str += self._validate_token(self.tokenizer.current_token(),
-                                           {")"}, ")",  dec_offset)
+                                           {")"}, ")",  new_offset)
         # expect {
         # subroutineBody
+        if self.tokenizer.current_token() == "{":
+            output_str += self.compile_subroutine_body(new_offset)
+        else:
+            raise ValueError("Expecting start of subroutine body {")
+
         # expect }
 
-        output_str += current_offset + "</subroutineDec" + "\n"
+        output_str += current_offset + f"</{current_tag}>" + "\n"
+        return output_str
+
+    def compile_subroutine_body(self, current_offset):
+        """
+        Compiles a (possibly empty) parameter list
+        :param current_offset: (str) tab for parent tag
+        :return: (str) xml
+        """
+        current_tag = "subroutineBody"
+        output_str = current_offset + f"<{current_tag}>" + "\n"
+        new_offset = current_offset + "\t"
+
+        # guaranteed to be "{"
+        output_str += new_offset + self.tokenizer.current_tag() + "\n"
+        self.tokenizer.next()
+
+        # compile any variable declarations
+        while self.tokenizer.current_token() not in STATEMENT_OR_ROUTINE_END:
+            output_str += self.compile_var_dec(new_offset)
+
+        # compile any statements
+        # while self.tokenizer.current_token() != "}":
+        #     pass
+        if self.tokenizer.current_token() != "}":
+            output_str += self.compile_statements(current_offset)
+
+        # guaranteed to be "}"
+        # output_str += new_offset + self.tokenizer.current_tag() + "\n"
+        # self.tokenizer.next()
+
+        output_str += current_offset + f"</{current_tag}>" + "\n"
+        return output_str
+
+    def compile_statements(self, current_offset):
+        """
+        Compiles a sequence of statements, not including the enclosing “{}”.
+        :param current_offset: (str) tab for parent tag
+        :return: (str) xml
+        """
+        current_tag = "statements"
+        output_str = current_offset + f"<{current_tag}>" + "\n"
+        new_offset = current_offset + "\t"
+
+        output_str += current_offset + f"</{current_tag}>" + "\n"
+        return output_str
+
+    def compile_do_statement(self, current_offset):
+        """
+        Compiles a do statement
+        :param current_offset: (str) tab for parent tag
+        :return: (str) xml
+        """
+        current_tag = "doStatement"
+        output_str = current_offset + f"<{current_tag}>" + "\n"
+        new_offset = current_offset + "\t"
+
+        output_str += current_offset + f"</{current_tag}>" + "\n"
+        return output_str
+
+    def compile_let_statement(self, current_offset):
+        """
+        Compiles a let statement
+        :param current_offset: (str) tab for parent tag
+        :return: (str) xml
+        """
+        current_tag = "letStatement"
+        output_str = current_offset + f"<{current_tag}>" + "\n"
+        new_offset = current_offset + "\t"
+
+        output_str += current_offset + f"</{current_tag}>" + "\n"
+        return output_str
+
+    def compile_while_statement(self, current_offset):
+        """
+        Compiles a while statement
+        :param current_offset: (str) tab for parent tag
+        :return: (str) xml
+        """
+        current_tag = "whileStatement"
+        output_str = current_offset + f"<{current_tag}>" + "\n"
+        new_offset = current_offset + "\t"
+
+        output_str += current_offset + f"</{current_tag}>" + "\n"
+        return output_str
+
+    def compile_return_statement(self, current_offset):
+        """
+        Compiles a return statement
+        :param current_offset: (str) tab for parent tag
+        :return: (str) xml
+        """
+        current_tag = "returnStatement"
+        output_str = current_offset + f"<{current_tag}>" + "\n"
+        new_offset = current_offset + "\t"
+
+        output_str += current_offset + f"</{current_tag}>" + "\n"
+        return output_str
+
+
+    def compile_if_statement(self, current_offset):
+        """
+        Compiles an if statement
+        :param current_offset: (str) tab for parent tag
+        :return: (str) xml
+        """
+        current_tag = "ifStatement"
+        output_str = current_offset + f"<{current_tag}>" + "\n"
+        new_offset = current_offset + "\t"
+
+        output_str += current_offset + f"</{current_tag}>" + "\n"
+        return output_str
+
+    def compile_var_dec(self, current_offset):
+        """
+        Compiles a var declaration
+        :param current_offset: (str) tab for parent tag
+        :return: (str) xml
+        """
+        current_tag = "varDec"
+        output_str = current_offset + f"<{current_tag}>" + "\n"
+        new_offset = current_offset + "\t"
+
+        # guaranteed to be var
+        output_str += new_offset + self.tokenizer.current_tag() + "\n"
+        self.tokenizer.next()
+
+        #TODO this code is duplicated from compile_class_var_dec
+        while self.tokenizer.current_token() != ";":
+            if self.tokenizer.current_token() == ",":
+                output_str += self._validate_token(self.tokenizer.current_token(),
+                                                   {","}, ",",
+                                                   new_offset)
+                continue
+            if self.tokenizer.current_type() == IDENTIFIER_TAG:
+                output_str += self._validate_token(self.tokenizer.current_type(),
+                                                   {IDENTIFIER_TAG}, "variable name",
+                                                   new_offset)
+            else:
+                raise ValueError("Expecting variable name")
+
+        # guaranteed to be ;
+        output_str += new_offset + self.tokenizer.current_tag() + "\n"
+        self.tokenizer.next()
+
+        output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
     def compile_paramater_list(self, current_offset):
         """
         Compiles a (possibly empty) parameter list
         :param current_offset: (str) tab for parent tag
-        :return:
+        :return: (str) xml
         """
-        output_str = current_offset + "<parameterList>" + "\n"
+        current_tag = "parameterList"
+        output_str = current_offset + f"<{current_tag}>" + "\n"
         var_offset = current_offset + "\t"
 
         while self.tokenizer.current_token() != ")":
@@ -201,5 +356,5 @@ class CompilationEngine:
                                                "var name",
                                                var_offset)
 
-        output_str += current_offset + "</parameterList>" + "\n"
+        output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str

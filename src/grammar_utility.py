@@ -13,6 +13,8 @@ Constants for compilation engine
 """
 SUBROUTINE_DEC_SET = {"constructor", "function", "method"}
 SUBROUTINE_OR_CLASS_END = {"constructor", "function", "method", "}"}
+STATEMENT_SET = {"let", "if", "while", "do", "return"}
+STATEMENT_OR_ROUTINE_END = {"let", "if", "while", "do", "return", "}"}
 
 SYMBOLS = {'{', '}',
            '(', ')',
