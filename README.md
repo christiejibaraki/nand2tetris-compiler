@@ -4,7 +4,7 @@ Jack Compiler: Project 10 &amp; 11
 - Project 10: Syntax Analysis: Tokenization and Parsing
 - Project 11: Code Generation
 
-The main module runs the first "half" of the compiler, which tokenizes and parses a Jack programming, 
+The main module runs the first "half" of the compiler, which tokenizes and parses a Jack program, 
 assigning tags to each token, which reflect the syntactic structure of the program. 
 The tokens and their tags are output to a set of XML files.
 

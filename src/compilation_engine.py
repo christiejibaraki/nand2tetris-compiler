@@ -35,58 +35,6 @@ class CompilationEngine:
         """
         return self.__output
 
-    def _validate_and_advance_helpder(self, source, target, error_message_input, offset):
-        """
-        Helper for validate_type_and_advance and validate_token_and_advance
-        If valid:
-                return xml tag and advance tokenizer
-            Otherwise raise error
-        :param source: (str) token or type to compare
-        :param target: {str} set of expected values
-        :param error_message_input: (str) description of target values
-        :param offset: (str) tab offset
-        :return: (str) xml output for current token
-        """
-        if source in target:
-            out = offset + self.tokenizer.current_tag() + "\n"
-            self.tokenizer.next()
-            return out
-
-        error_message = f"Expecting {error_message_input}, actual: " \
-                        f"{self.tokenizer.current_type()}: " \
-                        f"{self.tokenizer.current_token()}"
-
-        raise ValueError(error_message)
-
-    def _validate_type_and_advance(self, target, error_message_input, offset):
-        """
-        Validates current token type
-            If valid:
-                return xml tag and advance tokenizer
-            Otherwise raise error
-        :param source: (str) token or type to compare
-        :param target: {str} set of expected values
-        :param error_message_input: (str) description of target values
-        :param offset: (str) tab offset
-        :return: (str) xml output for current token
-        """
-        return self._validate_and_advance_helpder(self.tokenizer.current_type(),
-                                                  target, error_message_input, offset)
-
-    def _validate_token_and_advance(self, target, error_message_input, offset):
-        """
-        Validates current token
-            If valid:
-                return xml tag and advance tokenizer
-            Otherwise raise error
-        :param target: {str} set of expected values
-        :param error_message_input: (str) description of target values
-        :param offset: (str) tab offset
-        :return: (str) xml output for current token
-        """
-        return self._validate_and_advance_helpder(self.tokenizer.current_token(),
-                                                  target, error_message_input, offset)
-
     """
     Program structure methods
     """
@@ -140,30 +88,8 @@ class CompilationEngine:
         # guaranteed to be static or field
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
         self.tokenizer.next()
-
-        # expect a variable type (either a keyword or identifier)
-        output_str += self._validate_type_and_advance({KEYWORD_TAG, IDENTIFIER_TAG},
-                                                      "keyword or identifier", new_offset)
-
-        # expect at least one variable name
-        output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "variable name",
-                                                      new_offset)
-
-        # parse additional variable names
-        while self.tokenizer.current_token() != ";":
-            if self.tokenizer.current_token() == ",":
-                output_str += self._validate_token_and_advance({","}, ",",
-                                                               new_offset)
-                continue
-            if self.tokenizer.current_type() == IDENTIFIER_TAG:
-                output_str += self._validate_type_and_advance({IDENTIFIER_TAG},
-                                                              "variable name", new_offset)
-            else:
-                raise ValueError("Expecting variable name")
-
-        # guaranteed to be ;
-        output_str += new_offset + self.tokenizer.current_tag() + "\n"
-        self.tokenizer.next()
+        # type varName (,varName)*
+        output_str += self._compile_var_list(new_offset)
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
@@ -189,13 +115,10 @@ class CompilationEngine:
         # expect a subroutine name
         output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "subroutine name",
                                                       new_offset)
-
         # expect (
         output_str += self._validate_token_and_advance({"("}, "(", new_offset)
-
         # parameter list
         output_str += self._compile_paramater_list(new_offset)
-
         # expect )
         output_str += self._validate_token_and_advance({")"}, ")", new_offset)
 
@@ -273,30 +196,8 @@ class CompilationEngine:
         # guaranteed to be var
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
         self.tokenizer.next()
-
-        #TODO this code is duplicated from compile_class_var_dec
-        # expect a variable type (either a keyword or identifier)
-        output_str += self._validate_type_and_advance({KEYWORD_TAG, IDENTIFIER_TAG},
-                                                      "keyword or identifier", new_offset)
-
-        # expect at least one variable name
-        output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "variable name",
-                                                      new_offset)
-
-        # optional additional variable names
-        while self.tokenizer.current_token() != ";":
-            if self.tokenizer.current_token() == ",":
-                output_str += self._validate_token_and_advance({","}, ",", new_offset)
-                continue
-            if self.tokenizer.current_type() == IDENTIFIER_TAG:
-                output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "variable name",
-                                                              new_offset)
-            else:
-                raise ValueError(f"Expecting variable name, actual: {self.tokenizer.current_token()}")
-
-        # guaranteed to be ;
-        output_str += new_offset + self.tokenizer.current_tag() + "\n"
-        self.tokenizer.next()
+        # type varName (,varName)*
+        output_str += self._compile_var_list(new_offset)
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
@@ -555,4 +456,89 @@ class CompilationEngine:
                                                       "identifier or keyword", new_offset)
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
+        return output_str
+
+    """
+    Helpers methods
+    """
+    def _validate_and_advance_helper(self, source, target, error_message_input, offset):
+        """
+        Helper for validate_type_and_advance and validate_token_and_advance
+        If valid:
+                return xml tag and advance tokenizer
+            Otherwise raise error
+        :param source: (str) token or type to compare
+        :param target: {str} set of expected values
+        :param error_message_input: (str) description of target values
+        :param offset: (str) tab offset
+        :return: (str) xml output for current token
+        """
+        if source in target:
+            out = offset + self.tokenizer.current_tag() + "\n"
+            self.tokenizer.next()
+            return out
+
+        error_message = f"Expecting {error_message_input}, actual: " \
+                        f"{self.tokenizer.current_type()}: " \
+                        f"{self.tokenizer.current_token()}"
+
+        raise ValueError(error_message)
+
+    def _validate_type_and_advance(self, target, error_message_input, offset):
+        """
+        Validates current token type
+            If valid:
+                return xml tag and advance tokenizer
+            Otherwise raise error
+        :param source: (str) token or type to compare
+        :param target: {str} set of expected values
+        :param error_message_input: (str) description of target values
+        :param offset: (str) tab offset
+        :return: (str) xml output for current token
+        """
+        return self._validate_and_advance_helper(self.tokenizer.current_type(),
+                                                 target, error_message_input, offset)
+
+    def _validate_token_and_advance(self, target, error_message_input, offset):
+        """
+        Validates current token
+            If valid:
+                return xml tag and advance tokenizer
+            Otherwise raise error
+        :param target: {str} set of expected values
+        :param error_message_input: (str) description of target values
+        :param offset: (str) tab offset
+        :return: (str) xml output for current token
+        """
+        return self._validate_and_advance_helper(self.tokenizer.current_token(),
+                                                 target, error_message_input, offset)
+
+    def _compile_var_list(self, offset):
+        """"
+        Compiles pattern:
+        type varName (,varName)*;
+
+        Helper for classVarDec and varDec
+        :param offset: (str) tab offset
+        """
+        output_str = ""
+        # expect a variable type (either a keyword or identifier)
+        output_str += self._validate_type_and_advance({KEYWORD_TAG, IDENTIFIER_TAG},
+                                                      "keyword or identifier", offset)
+        # expect at least one variable name
+        output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "variable name",
+                                                      offset)
+        # optional additional variable names
+        while self.tokenizer.current_token() != ";":
+            if self.tokenizer.current_token() == ",":
+                output_str += self._validate_token_and_advance({","}, ",", offset)
+                continue
+            if self.tokenizer.current_type() == IDENTIFIER_TAG:
+                output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "variable name",
+                                                              offset)
+            else:
+                raise ValueError(f"Expecting variable name, actual: {self.tokenizer.current_token()}")
+        # guaranteed to be ;
+        output_str += offset + self.tokenizer.current_tag() + "\n"
+        self.tokenizer.next()
         return output_str

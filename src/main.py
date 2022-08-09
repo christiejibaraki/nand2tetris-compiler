@@ -8,7 +8,8 @@ from io_utility import read_file, clean_code, write_file
 from tokenizer import Tokenizer
 from compilation_engine import CompilationEngine
 
-def translate_file(input_file_path):
+
+def analyze_jack_file(input_file_path):
     """
     Tokenize and tag jack program
 
@@ -33,7 +34,7 @@ if __name__ == "__main__":
         name, extension = os.path.splitext(filename)
         if extension == ".jack":
             print(f"*** Translating {filename}")
-            output = translate_file(os.path.join(path, filename))
+            output = analyze_jack_file(os.path.join(path, filename))
             print(output)
             out_filename = name + "_T.xml"
             out_file_path = os.path.join(path, out_filename)

@@ -9,7 +9,7 @@ from grammar_utility import create_tag, \
 
 class Tokenizer:
     """
-    Tokenizes jack code
+    Tokenizes jack code into lexical elements
         Pad operators with whitespace
         Tag tokens
     """
