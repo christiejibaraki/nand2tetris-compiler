@@ -26,7 +26,7 @@ class CompilationEngine:
                             f"actual token: {self.tokenizer.current_token()}"
             raise ValueError(error_message)
 
-        self.__output = self.compile_class()
+        self.__output = self._compile_class()
 
     def get_output(self):
         """
@@ -62,7 +62,7 @@ class CompilationEngine:
     """
     Program structure methods
     """
-    def compile_class(self):
+    def _compile_class(self):
         """
         Compiles a complete class
         :return: (str) xml output
@@ -84,12 +84,12 @@ class CompilationEngine:
         # optional class variable declarations
         while not (self.tokenizer.current_token() in SUBROUTINE_OR_CLASS_END):
             if self.tokenizer.current_token() in {"static", "field"}:
-                output_str += self.compile_class_var_dec(current_offset)
+                output_str += self._compile_class_var_dec(current_offset)
 
         # optional subroutines
         while self.tokenizer.current_token() != "}":
             if self.tokenizer.current_token() in SUBROUTINE_DEC_SET:
-                output_str += self.compile_subroutine(current_offset)
+                output_str += self._compile_subroutine(current_offset)
 
         # expect "}"
         temp = "}"
@@ -100,7 +100,7 @@ class CompilationEngine:
         output_str += f"</{current_tag}>" + "\n"
         return output_str
 
-    def compile_class_var_dec(self, current_offset):
+    def _compile_class_var_dec(self, current_offset):
         """
         Compiles a static declaration or a field declaration
         :param current_offset: (str) tab for parent tag
@@ -146,7 +146,7 @@ class CompilationEngine:
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
-    def compile_subroutine(self, current_offset):
+    def _compile_subroutine(self, current_offset):
         """
         Compiles a complete method, function, or constructor
         :param current_offset: (str) tab for parent tag
@@ -176,7 +176,7 @@ class CompilationEngine:
                                            {"("}, "(", new_offset)
 
         # parameter list
-        output_str += self.compile_paramater_list(new_offset)
+        output_str += self._compile_paramater_list(new_offset)
 
         # expect )
         output_str += self._validate_token(self.tokenizer.current_token(),
@@ -184,14 +184,14 @@ class CompilationEngine:
         # expect {
         # subroutineBody
         if self.tokenizer.current_token() == "{":
-            output_str += self.compile_subroutine_body(new_offset)
+            output_str += self._compile_subroutine_body(new_offset)
         else:
             raise ValueError("Expecting start of subroutine body {")
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
-    def compile_paramater_list(self, current_offset):
+    def _compile_paramater_list(self, current_offset):
         """
         Compiles a (possibly empty) parameter list
         :param current_offset: (str) tab for parent tag
@@ -219,7 +219,7 @@ class CompilationEngine:
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
-    def compile_subroutine_body(self, current_offset):
+    def _compile_subroutine_body(self, current_offset):
         """
         Compiles a (possibly empty) parameter list
         :param current_offset: (str) tab for parent tag
@@ -235,11 +235,11 @@ class CompilationEngine:
 
         # compile any variable declarations
         while self.tokenizer.current_token() not in STATEMENT_OR_ROUTINE_END:
-            output_str += self.compile_var_dec(new_offset)
+            output_str += self._compile_var_dec(new_offset)
 
         # compile any statements
         while self.tokenizer.current_token() != "}":
-            output_str += self.compile_statements(current_offset)
+            output_str += self._compile_statements(current_offset)
 
         # guaranteed to be "}"
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -248,7 +248,7 @@ class CompilationEngine:
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
-    def compile_var_dec(self, current_offset):
+    def _compile_var_dec(self, current_offset):
         """
         Compiles a var declaration
         :param current_offset: (str) tab for parent tag
@@ -298,7 +298,7 @@ class CompilationEngine:
     """
     Statement methods
     """
-    def compile_statements(self, current_offset):
+    def _compile_statements(self, current_offset):
         """
         Compiles a sequence of statements, not including the enclosing “{}”.
         :param current_offset: (str) tab for parent tag
@@ -311,26 +311,26 @@ class CompilationEngine:
         while self.tokenizer.current_token() != "}":
             current_token = self.tokenizer.current_token()
             if current_token == "do":
-                output_str += self.compile_do_statement(new_offset)
+                output_str += self._compile_do_statement(new_offset)
                 continue
             if current_token == "let":
-                output_str += self.compile_let_statement(new_offset)
+                output_str += self._compile_let_statement(new_offset)
                 continue
             if current_token == "while":
-                output_str += self.compile_while_statement(new_offset)
+                output_str += self._compile_while_statement(new_offset)
                 continue
             if current_token == "return":
-                output_str += self.compile_return_statement(new_offset)
+                output_str += self._compile_return_statement(new_offset)
                 continue
             if current_token == "if":
-                output_str += self.compile_if_statement(new_offset)
+                output_str += self._compile_if_statement(new_offset)
                 continue
             raise ValueError("Expecting do, let, while, return, or if")
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
-    def compile_do_statement(self, current_offset):
+    def _compile_do_statement(self, current_offset):
         """
         Compiles a do statement
         :param current_offset: (str) tab for parent tag
@@ -361,7 +361,7 @@ class CompilationEngine:
         # expect "(", followed by an expression list, and ")"
         output_str += self._validate_token(self.tokenizer.current_token(),
                                            {"("}, "(", new_offset)
-        output_str += self.compile_expression_list(new_offset)
+        output_str += self._compile_expression_list(new_offset)
 
         # guaranteed to be )
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -374,7 +374,7 @@ class CompilationEngine:
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
-    def compile_let_statement(self, current_offset):
+    def _compile_let_statement(self, current_offset):
         """
         Compiles a let statement
         :param current_offset: (str) tab for parent tag
@@ -397,7 +397,7 @@ class CompilationEngine:
         if self.tokenizer.current_token() == "[":
             output_str += new_offset + self.tokenizer.current_tag() + "\n"
             self.tokenizer.next()
-            output_str += self.compile_expression()
+            output_str += self._compile_expression()
             output_str += self._validate_token(self.tokenizer.current_token(),
                                                {"]"}, "]",
                                                new_offset)
@@ -406,7 +406,7 @@ class CompilationEngine:
                                            {"="}, "=",
                                            new_offset)
         # expect expression
-        output_str += self.compile_expression(new_offset)
+        output_str += self._compile_expression(new_offset)
 
         # expect ;
         output_str += self._validate_token(self.tokenizer.current_token(),
@@ -415,7 +415,7 @@ class CompilationEngine:
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
-    def compile_while_statement(self, current_offset):
+    def _compile_while_statement(self, current_offset):
         """
         Compiles a while statement
         :param current_offset: (str) tab for parent tag
@@ -433,7 +433,7 @@ class CompilationEngine:
         output_str += self._validate_token(self.tokenizer.current_token(),
                                            {"("}, ")", new_offset)
 
-        output_str += self.compile_expression(new_offset)
+        output_str += self._compile_expression(new_offset)
 
         # expect )
         output_str += self._validate_token(self.tokenizer.current_token(),
@@ -443,7 +443,7 @@ class CompilationEngine:
         output_str += self._validate_token(self.tokenizer.current_token(),
                                            {"{"}, "{", new_offset)
         # optional statements
-        output_str += self.compile_statements(new_offset)
+        output_str += self._compile_statements(new_offset)
 
         # guaranteed to be }
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -452,7 +452,7 @@ class CompilationEngine:
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
-    def compile_return_statement(self, current_offset):
+    def _compile_return_statement(self, current_offset):
         """
         Compiles a return statement
         :param current_offset: (str) tab for parent tag
@@ -467,7 +467,7 @@ class CompilationEngine:
         self.tokenizer.next()
 
         if self.tokenizer.current_token() != ";":
-            output_str += self.compile_expression(new_offset)
+            output_str += self._compile_expression(new_offset)
 
         # expect ;
         output_str += self._validate_token(self.tokenizer.current_token(),
@@ -476,7 +476,7 @@ class CompilationEngine:
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
-    def compile_if_statement(self, current_offset):
+    def _compile_if_statement(self, current_offset):
         """
         Compiles an if statement
         :param current_offset: (str) tab for parent tag
@@ -494,7 +494,7 @@ class CompilationEngine:
         output_str += self._validate_token(self.tokenizer.current_token(),
                                            {"("}, ")", new_offset)
 
-        output_str += self.compile_expression(new_offset)
+        output_str += self._compile_expression(new_offset)
 
         # expect )
         output_str += self._validate_token(self.tokenizer.current_token(),
@@ -504,7 +504,7 @@ class CompilationEngine:
         output_str += self._validate_token(self.tokenizer.current_token(),
                                            {"{"}, "{", new_offset)
         # optional statements
-        output_str += self.compile_statements(new_offset)
+        output_str += self._compile_statements(new_offset)
 
         # guaranteed to be }
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -519,7 +519,7 @@ class CompilationEngine:
             output_str += self._validate_token(self.tokenizer.current_token(),
                                                {"{"}, "{", new_offset)
             # optional statements
-            output_str += self.compile_statements(new_offset)
+            output_str += self._compile_statements(new_offset)
 
             # guaranteed to be }
             output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -531,7 +531,7 @@ class CompilationEngine:
     """
     Expression methods
     """
-    def compile_expression_list(self, current_offset):
+    def _compile_expression_list(self, current_offset):
         """
         Compiles a (possibly empty) commaseparated list of expressions.
         :param current_offset: (str) tab for parent tag
@@ -547,12 +547,12 @@ class CompilationEngine:
                                                    {","}, ",",
                                                    new_offset)
                 continue
-            output_str += self.compile_expression(new_offset)
+            output_str += self._compile_expression(new_offset)
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
-    def compile_expression(self, current_offset):
+    def _compile_expression(self, current_offset):
         """
         Compiles an expression.
         :param current_offset: (str) tab for parent tag
@@ -562,12 +562,12 @@ class CompilationEngine:
         output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + "\t"
 
-        output_str += self.compile_term(new_offset)
+        output_str += self._compile_term(new_offset)
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
 
-    def compile_term(self, current_offset):
+    def _compile_term(self, current_offset):
         """
         Compiles a term.
 
