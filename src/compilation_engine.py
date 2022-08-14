@@ -6,6 +6,7 @@ from grammar_utility import \
     KEYWORD_TAG, IDENTIFIER_TAG, STRING_CONSTANT_TAG, INTEGER_CONSTANT_TAG
 from grammar_utility import SUBROUTINE_OR_CLASS_END, SUBROUTINE_DEC_SET, \
     STATEMENT_OR_ROUTINE_END, TERM_OPS, KEYWORD_CONSTANT, UNARY_OP
+from symbol_table import SymbolTable, Row, DECLARING, ARG_KIND, VAR_KIND
 
 OFFSET_CHAR = "  "
 
@@ -27,7 +28,11 @@ class CompilationEngine:
                             f"actual token: {self.tokenizer.current_token()}"
             raise ValueError(error_message)
 
+        self.__symbol_table = SymbolTable()
         self.__output = self._compile_class()
+
+        # for symbol table
+        self.__current_class = None
 
     def get_output(self):
         """
@@ -35,6 +40,13 @@ class CompilationEngine:
         :return: (str) xml representing parse tree
         """
         return self.__output
+
+    def get_symbol_table(self):
+        """
+        Returns symbol table
+        :return: (SymbolTable)
+        """
+        return self.__symbol_table
 
     """
     Program structure methods
@@ -51,6 +63,7 @@ class CompilationEngine:
             {"class"}, "keyword class", current_offset)
 
         # expect className identifier
+        self.__current_class = self.tokenizer.current_token()
         output_str += self._validate_type_and_advance(
             {IDENTIFIER_TAG}, "identifier", current_offset)
 
@@ -88,9 +101,10 @@ class CompilationEngine:
 
         # guaranteed to be static or field
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
+        static_or_field_kind = self.tokenizer.current_token()
         self.tokenizer.next()
         # type varName (,varName)*
-        output_str += self._compile_var_list(new_offset)
+        output_str += self._compile_var_list(new_offset, static_or_field_kind, True)
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
@@ -101,6 +115,11 @@ class CompilationEngine:
         :param current_offset: (str) tab for parent tag
         :return: (str) xml for class var dec
         """
+        # TODO is this for functions or just methods?
+        # create a new subroutine symbol table and add this
+        self.__symbol_table.new_subroutine()
+        self._add_var_helper("this", self.__current_class, ARG_KIND, DECLARING, False)
+
         current_tag = "subroutineDec"
         output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + OFFSET_CHAR
@@ -147,10 +166,14 @@ class CompilationEngine:
             if self.tokenizer.current_token() == ",":
                 output_str += self._validate_token_and_advance({","}, ",", new_offset)
                 continue
+            var_type = self.tokenizer.current_token()
             output_str += self._validate_type_and_advance({KEYWORD_TAG, IDENTIFIER_TAG},
                                                           "var type", new_offset)
+            var_name = self.tokenizer.current_token()
             output_str += self._validate_type_and_advance({IDENTIFIER_TAG},
                                                           "var name", new_offset)
+            # add arg to subroutine symbol table
+            self._add_var_helper(var_name, var_type, ARG_KIND, DECLARING, False)
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
@@ -198,7 +221,7 @@ class CompilationEngine:
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
         self.tokenizer.next()
         # type varName (,varName)*
-        output_str += self._compile_var_list(new_offset)
+        output_str += self._compile_var_list(new_offset, VAR_KIND, False)
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
         return output_str
@@ -551,19 +574,24 @@ class CompilationEngine:
         return self._validate_and_advance_helper(self.tokenizer.current_token(),
                                                  target, error_message_input, offset)
 
-    def _compile_var_list(self, offset):
+    def _compile_var_list(self, offset, var_kind, is_class_var):
         """"
         Compiles pattern:
         type varName (,varName)*;
 
         Helper for classVarDec and varDec
         :param offset: (str) tab offset
+        :param var_kind: (str) static, field, arg, var
+        :param is_class_var: (boolean) if true class var, else subroutine var
         """
         output_str = ""
         # expect a variable type (either a keyword or identifier)
+        var_type = self.tokenizer.current_token()
         output_str += self._validate_type_and_advance({KEYWORD_TAG, IDENTIFIER_TAG},
                                                       "keyword or identifier", offset)
         # expect at least one variable name
+        self._add_var_helper(self.tokenizer.current_token(),
+                             var_type, var_kind, DECLARING, is_class_var)
         output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "variable name",
                                                       offset)
         # optional additional variable names
@@ -572,6 +600,8 @@ class CompilationEngine:
                 output_str += self._validate_token_and_advance({","}, ",", offset)
                 continue
             if self.tokenizer.current_type() == IDENTIFIER_TAG:
+                self._add_var_helper(self.tokenizer.current_token(),
+                                     var_type, var_kind, DECLARING, is_class_var)
                 output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "variable name",
                                                               offset)
             else:
@@ -610,3 +640,22 @@ class CompilationEngine:
         self.tokenizer.next()
 
         return output_str
+
+    def _add_var_helper(self, name, type, kind, use, is_class_var):
+        """
+        Add identifier to symbol table
+        :param name: (str) name if identifier
+        :param type: (str) type of identifier (int, boolean, class type)
+        :param kind: (str) kind of identifier (static, field)
+        :param use: (str) declaring, using
+        :param is_class_var: (boolean) if true, update class table,
+                            otherwise subroutine table
+        :return: NA, update symbol table
+        """
+        if is_class_var:
+            table = self.__symbol_table.get_class_table()
+        else:
+            table = self.__symbol_table.get_subroutine_table()
+
+        new_row = Row(name, type, kind, use)
+        table.add_row(new_row)

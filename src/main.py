@@ -18,6 +18,8 @@ def compile_jack_program(input_file_path):
     orig_input_str = read_file(input_file_path)
     clean_input_str = clean_code(orig_input_str)
     compilation_engine = CompilationEngine(clean_input_str)
+    print("class table\n", compilation_engine.get_symbol_table().get_class_table())
+    print("last subroutine table\n", compilation_engine.get_symbol_table().get_subroutine_table())
     return compilation_engine.get_output()
 
 

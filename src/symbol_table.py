@@ -5,8 +5,11 @@ Symbol Table Module
 STATIC_KIND = "static"
 FIELD_KIND = "field"
 ARG_KIND = "arg"
-VAR_KIND = "kind"
-FIRST_KIND_INDEX = 1
+VAR_KIND = "var"
+FIRST_KIND_INDEX = 0
+
+DECLARING = "declaring"
+USING = "using"
 
 
 class SymbolTable:
@@ -41,6 +44,15 @@ class SymbolTable:
         :return: (SingleTable)
         """
         return self.__subroutine_table
+
+    def __str__(self):
+        """
+        :return: (str) representation of Symbol Table
+        """
+        return "*** class\n" \
+                f"{self.__class_table}\n" \
+                "*** subroutine\n" \
+                f"{self.__subroutine_table}\n"
 
 
 class SingleTable:
@@ -94,12 +106,24 @@ class SingleTable:
             return self.__table[identifier_name]
         return None
 
+    def __str__(self):
+        """
+        :return: representation of table
+        """
+        return f"{self.__table}"
+
+    def __repr__(self):
+        """
+        :return: (str) representation of table
+        """
+        return self.__str__()
+
 
 class Row:
     """
     Represents a row in a symbol table
     """
-    def __init__(self, name, identifier_type, kind):
+    def __init__(self, name, identifier_type, kind, use):
         """
 
         :param name: (str) identifier name
@@ -110,6 +134,7 @@ class Row:
         self.__identifier_type = identifier_type
         self.__kind = kind
         self.__identifier_number = None
+        self.__use = use
 
     def set_identifier_number(self, identifier_number):
         """
@@ -145,3 +170,25 @@ class Row:
         :return: (int) index number
         """
         return self.__identifier_number
+
+    def get_use(self):
+        """
+        :return: (str) use: declaring or using
+        """
+        return self.__use
+
+    def __str__(self):
+        """
+        :return: (str) representation of row
+        """
+        return f"*** {self.__name}; " \
+               f"type: {self.__identifier_type}; " \
+               f"kind: {self.__kind}; " \
+               f"index: {self.__identifier_number}; " \
+               f"use: {self.__use}\n"
+
+    def __repr__(self):
+        """
+        :return: (str) representation of row
+        """
+        return self.__str__()
