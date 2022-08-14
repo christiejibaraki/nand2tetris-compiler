@@ -8,12 +8,12 @@ from io_utility import read_file, clean_code, write_file
 from compilation_engine import CompilationEngine
 
 
-def analyze_jack_file(input_file_path):
+def compile_jack_program(input_file_path):
     """
-    Tokenize and tag jack program
+    Compile a jack program
 
     :param input_file_path: (str) path to input file
-    :return: (str) xml representing syntactic structure of program
+    :return: (str) vm code
     """
     orig_input_str = read_file(input_file_path)
     clean_input_str = clean_code(orig_input_str)
@@ -30,9 +30,9 @@ if __name__ == "__main__":
     for filename in os.listdir(path):
         name, extension = os.path.splitext(filename)
         if extension == ".jack":
-            print(f"*** Translating {filename}")
-            output = analyze_jack_file(os.path.join(path, filename))
-            out_filename = name + ".xml"
+            print(f"*** Compiling {filename}")
+            output = compile_jack_program(os.path.join(path, filename))
+            out_filename = name + ".vm"
             out_file_path = os.path.join(path, out_filename)
             write_file(out_file_path, output)
-            print(f"*** Writing output file {out_filename} to {path}")
+            print(f"--- Writing output file {out_filename} to {path}")
