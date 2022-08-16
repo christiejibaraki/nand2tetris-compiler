@@ -7,7 +7,8 @@ from grammar_utility import \
 from grammar_utility import SUBROUTINE_OR_CLASS_END, SUBROUTINE_DEC_SET, \
     STATEMENT_OR_ROUTINE_END, TERM_OPS, KEYWORD_CONSTANT, UNARY_OP
 from symbol_table import SymbolTable, Row, DECLARING, ARG_KIND, LOCAL_KIND
-from vm_writer import VMWriter, POINTER_SEGMENT, ARGUMENT_SEGMENT, CONSTANT_SEGMENT, TEMP_SEGMENT
+from vm_writer import VMWriter, \
+    POINTER_SEGMENT, ARGUMENT_SEGMENT, CONSTANT_SEGMENT, TEMP_SEGMENT, THAT_SEGMENT
 
 OFFSET_CHAR = "  "
 
@@ -352,6 +353,7 @@ class CompilationEngine:
         current_tag = "letStatement"
         output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + OFFSET_CHAR
+        self.__vm_writer.write_comment("let statement")
 
         # guaranteed to be let
         output_str += new_offset + self.tokenizer.current_tag() + "\n"
@@ -368,6 +370,10 @@ class CompilationEngine:
             self.tokenizer.next()
             output_str += self._compile_expression(new_offset, {"]"})
             output_str += self._validate_token_and_advance({"]"}, "]", new_offset)
+            self.__vm_writer.write_push_command(self.__symbol_table.get_kind(target_var),
+                                       self.__symbol_table.get_index(target_var))
+            self.__vm_writer.write_arithmetic_command("add")
+            self.__vm_writer.write_pop_command(TEMP_SEGMENT, 1)
 
         # expect "="
         output_str += self._validate_token_and_advance({"="}, "=", new_offset)
@@ -377,7 +383,11 @@ class CompilationEngine:
         output_str += self._validate_token_and_advance({";"}, ";", new_offset)
 
         # if target not array, simple pop into target
-        if not is_array:
+        if is_array:
+            self.__vm_writer.write_push_command(TEMP_SEGMENT, 1)
+            self.__vm_writer.write_pop_command(POINTER_SEGMENT, 1)
+            self.__vm_writer.write_pop_command(THAT_SEGMENT, 0)
+        else:
             self.__vm_writer.write_pop_command(self.__symbol_table.get_kind(target_var),
                                        self.__symbol_table.get_index(target_var))
 
@@ -630,6 +640,8 @@ class CompilationEngine:
                 output_str += self._compile_subroutine_call(new_offset)
             # array entry
             elif next_token == "[":
+                self.__vm_writer.write_comment("term array")
+                target_var = self.tokenizer.current_token()
                 output_str += self._validate_type_and_advance({IDENTIFIER_TAG},
                                                               "identifier", new_offset)
                 # write [
@@ -640,6 +652,12 @@ class CompilationEngine:
                 # write ]
                 output_str += new_offset + self.tokenizer.current_tag() + "\n"
                 self.tokenizer.next()
+
+                self.__vm_writer.write_push_command(self.__symbol_table.get_kind(target_var),
+                                                    self.__symbol_table.get_index(target_var))
+                self.__vm_writer.write_arithmetic_command("add")
+                self.__vm_writer.write_pop_command(POINTER_SEGMENT, 1)
+                self.__vm_writer.write_push_command(THAT_SEGMENT, 0)
             # variable name
             else:
                 # push variable
