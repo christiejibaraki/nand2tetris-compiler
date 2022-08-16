@@ -236,8 +236,9 @@ class CompilationEngine:
             output_str += self._compile_subroutine_var_dec(new_offset)
 
         # vm command to declare a subroutine after local variables are counted
-        self.__vm_writer.write_function_command(f"{self.__current_class}.{self.__current_subroutine_name}",
-                                                self.__current_subroutine_n_locals)
+        self.__vm_writer.write_function_command(
+            f"{self.__current_class}.{self.__current_subroutine_name}",
+            self.__current_subroutine_n_locals)
 
         # if method, first arg is reference to instance
         if self.__current_subroutine_type == "method":
@@ -529,7 +530,6 @@ class CompilationEngine:
     """
     Expression methods
     """
-
     def _compile_expression_list(self, current_offset):
         """
         Compiles a (possibly empty) comma separated list of expressions.
@@ -643,8 +643,9 @@ class CompilationEngine:
             # variable name
             else:
                 # push variable
-                self.__vm_writer.write_push_command(self.__symbol_table.get_kind(self.tokenizer.current_token()),
-                                                    self.__symbol_table.get_index(self.tokenizer.current_token()))
+                self.__vm_writer.write_push_command(
+                    self.__symbol_table.get_kind(self.tokenizer.current_token()),
+                    self.__symbol_table.get_index(self.tokenizer.current_token()))
                 output_str += self._validate_type_and_advance({IDENTIFIER_TAG},
                                                               "identifier", new_offset)
 
@@ -784,7 +785,8 @@ class CompilationEngine:
                 self.__vm_writer.write_push_command(self.__symbol_table.get_kind(name_1),
                                                     self.__symbol_table.get_index(name_1))
                 self.__current_subroutine_args += 1
-                subroutine_call_name = f"{self.__symbol_table.get_type(name_1)}.{self.tokenizer.current_token()}"
+                subroutine_call_name = f"{self.__symbol_table.get_type(name_1)}." \
+                                       f"{self.tokenizer.current_token()}"
 
             output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "identifier",
                                                           offset)
@@ -835,7 +837,8 @@ class CompilationEngine:
         Increment if label index
         :return: (str) unique label
         """
-        label = f"{self.__current_class}.{self.__current_subroutine_name}If{self.__current_index_if}"
+        label = f"{self.__current_class}.{self.__current_subroutine_name}" \
+                f"If{self.__current_index_if}"
         self.__current_index_if += 1
         return label
 
@@ -845,6 +848,7 @@ class CompilationEngine:
         Increment while label index
         :return: (str) unique label
         """
-        label = f"{self.__current_class}.{self.__current_subroutine_name}While{self.__current_index_while}"
+        label = f"{self.__current_class}.{self.__current_subroutine_name}" \
+                f"While{self.__current_index_while}"
         self.__current_index_while += 1
         return label

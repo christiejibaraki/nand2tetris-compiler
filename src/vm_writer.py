@@ -3,7 +3,7 @@ VM Writer Module
 Output module for generating VM code
 """
 from grammar_utility import \
-    KEYWORD_TAG, IDENTIFIER_TAG, STRING_CONSTANT_TAG, INTEGER_CONSTANT_TAG, KEYWORD_CONSTANT
+    STRING_CONSTANT_TAG, INTEGER_CONSTANT_TAG, KEYWORD_CONSTANT
 
 TOKEN_TO_VM_ARITHMETIC = {
     "+": "add",
@@ -32,6 +32,9 @@ SYMBOL_TABLE_TO_VM_SEGMENT = {
 
 
 class VMWriter:
+    """
+    Outputs VM commands
+    """
 
     def __init__(self):
         self.__output = ""
@@ -110,42 +113,94 @@ class VMWriter:
     Basic Commands
     """
     def write_push_command(self, segment, index):
+        """
+        Write push command
+        :param segment: (str) memory segment
+        :param index: (int) index
+        :return: NA
+        """
         segment = SYMBOL_TABLE_TO_VM_SEGMENT[segment]
         self.__output += f"push {segment} {str(index)}\n"
 
     def write_pop_command(self, segment, index):
+        """
+        Write pop command
+        :param segment: (str) memory segment
+        :param index: (int) index
+        :return: NA
+        """
         segment = SYMBOL_TABLE_TO_VM_SEGMENT[segment]
         self.__output += f"pop {segment} {str(index)}\n"
 
     def write_arithmetic_command(self, command):
+        """
+        Write arithmetic command
+        :param command: (str) the command
+        :return: NA
+        """
         self.__output += f"{command}\n"
 
     def write_label_command(self, label):
+        """
+        Write label command
+        :param label: (str) the label
+        :return: NA
+        """
         self.__output += f"label {label}\n"
 
     def write_goto_command(self, label):
+        """
+        Write goto command
+        :param label: (str) label to goto
+        :return: NA
+        """
         self.__output += f"goto {label}\n"
 
     def write_if_command(self, label):
+        """
+        Write if-goto command
+        :param label: (str) label to goto
+        :return: NA
+        """
         self.__output += f"if-goto {label}\n"
 
     def write_call_command(self, name, nArgs):
+        """
+        Write command to call a function
+        :param name: (str) name of the function
+        :param nArgs: (int) number of arguments the function takes
+        :return: NA
+        """
         self.__output += f"call {name} {str(nArgs)}\n"
 
     def write_function_command(self, name, nLocals):
+        """
+        Write command to declare a function
+        :param name: (str) name of the function
+        :param nLocals: (int) number of local variables
+        :return: NA
+        """
         self.__output += f"function {name} {str(nLocals)}\n"
 
     def write_void_return(self):
         """
         Write vm commands for subroutine with return type void
-        :return:
+        :return: NA
         """
         self.write_push_command(CONSTANT_SEGMENT, 0)
         self.write_return_command()
 
     def write_return_command(self):
+        """
+        Write return command
+        :return: NA
+        """
         self.__output += "return\n"
 
     def write_comment(self, comment_text):
+        """
+        Write a comment
+        :param comment_text: (str) text of the comment
+        :return: NA
+        """
         self.__output += f"// {comment_text}\n"
-
