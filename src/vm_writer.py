@@ -21,15 +21,16 @@ POINTER_SEGMENT = "pointer"
 TEMP_SEGMENT = "temp"
 THAT_SEGMENT = "that"
 
+# arrays and objects point to the heap
 SYMBOL_TABLE_TO_VM_SEGMENT = {
-    "static": "static",
-    "field": "this",
-    "arg": ARGUMENT_SEGMENT, ARGUMENT_SEGMENT: ARGUMENT_SEGMENT,
-    "var": "local", "local": "local",
-    POINTER_SEGMENT: POINTER_SEGMENT,
-    CONSTANT_SEGMENT: CONSTANT_SEGMENT,
-    TEMP_SEGMENT: TEMP_SEGMENT,
-    THAT_SEGMENT: THAT_SEGMENT
+    "static": "static",  # global/class variables
+    "field": "this",  # instance variables
+    "arg": ARGUMENT_SEGMENT, ARGUMENT_SEGMENT: ARGUMENT_SEGMENT,  # argument variables of function
+    "var": "local", "local": "local",  # local variables of function
+    POINTER_SEGMENT: POINTER_SEGMENT,  # use to map this and that on the heap
+    CONSTANT_SEGMENT: CONSTANT_SEGMENT,  # constants
+    TEMP_SEGMENT: TEMP_SEGMENT,  # temporary variables
+    THAT_SEGMENT: THAT_SEGMENT  # array values
 }
 
 
@@ -195,6 +196,7 @@ class VMWriter:
         Write vm commands for subroutine with return type void
         :return: NA
         """
+        # push 0 since all subroutines must return something
         self.write_push_command(CONSTANT_SEGMENT, 0)
         self.write_return_command()
 
