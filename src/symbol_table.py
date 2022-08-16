@@ -5,7 +5,7 @@ Symbol Table Module
 STATIC_KIND = "static"
 FIELD_KIND = "field"
 ARG_KIND = "arg"
-VAR_KIND = "var"
+LOCAL_KIND = "local"
 FIRST_KIND_INDEX = 0
 
 DECLARING = "declaring"
@@ -28,9 +28,60 @@ class SymbolTable:
         """
         self.__subroutine_table = SingleTable()
 
+    def contains(self, token):
+        """
+        :param token: (str) identifier name
+        :return: true if either table contains token
+        """
+        return self.__class_table.contains(token) or \
+               self.__subroutine_table.contains(token)
+
     """
     Getters
     """
+    def get_kind(self, token):
+        """
+        Get kind for token
+        :param token: (str) identifier name
+        :return: (str) kind
+        """
+        if self.__subroutine_table.contains(token):
+            return self.__subroutine_table.get_kind(token)
+        if self.__class_table.contains(token):
+            return self.__class_table.get_kind(token)
+        raise KeyError(f"Symbol table does not contain {token}")
+
+    def get_index(self, token):
+        """
+        Get index for token
+        :param token: (str) identifier name
+        :return: (int) index
+        """
+        if self.__subroutine_table.contains(token):
+            return self.__subroutine_table.get_index(token)
+        if self.__class_table.contains(token):
+            return self.__class_table.get_index(token)
+        raise KeyError(f"Symbol table does not contain {token}")
+
+    def get_type(self, token):
+        """
+        Get token type, e.g. : int, boolean, class
+        :param token: (str) identifier name
+        :return: (str) type
+        """
+        if self.__subroutine_table.contains(token):
+            return self.__subroutine_table.get_type(token)
+        if self.__class_table.contains(token):
+            return self.__class_table.get_type(token)
+        raise KeyError(f"Symbol table does not contain {token}")
+
+    def get_num_class_fields(self):
+        """
+        Get the number of field variables for the class
+        :return: (int)
+        """
+        return self.__class_table.get_number_of_field_variables()
+
     def get_class_table(self):
         """
         Get class symbol table
@@ -68,6 +119,42 @@ class SingleTable:
         self.__next_arg_index = FIRST_KIND_INDEX
         self.__next_var_index = FIRST_KIND_INDEX
 
+    def get_number_of_field_variables(self):
+        """
+        Get the number of field variables in the table
+        :return: (int)
+        """
+        # index starts at 0
+        return self.__next_field_index
+
+    def contains(self, token):
+        """
+        :param token: (str) identifier name
+        :return: (boolean) true  if table contains token
+        """
+        return token in self.__table
+
+    def get_kind(self, token):
+        """
+        :param token: (str) identifier name
+        :return: (str) kind
+        """
+        return self.__table[token].get_kind()
+
+    def get_index(self, token):
+        """
+        :param token: (str) identifier name
+        :return: (int) index
+        """
+        return self.__table[token].get_identifier_number()
+
+    def get_type(self, token):
+        """
+        :param token: (str) identifier name
+        :return: (str) type (int, boolean, class)
+        """
+        return self.__table[token].get_type()
+
     def add_row(self, new_row):
         """
         Add row to the table
@@ -88,7 +175,7 @@ class SingleTable:
         elif identifier_kind == ARG_KIND:
             new_row.set_identifier_number(self.__next_arg_index)
             self.__next_arg_index += 1
-        elif identifier_kind == VAR_KIND:
+        elif identifier_kind == LOCAL_KIND:
             new_row.set_identifier_number(self.__next_var_index)
             self.__next_var_index += 1
         else:
@@ -157,7 +244,7 @@ class Row:
         """
         :return: (str) identifier type, e.g. int, boolean, char, class type
         """
-        return self.__type
+        return self.__identifier_type
 
     def get_kind(self):
         """

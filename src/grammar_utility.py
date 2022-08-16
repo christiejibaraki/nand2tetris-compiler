@@ -16,7 +16,7 @@ SUBROUTINE_OR_CLASS_END = {"constructor", "function", "method", "}"}
 STATEMENT_SET = {"let", "if", "while", "do", "return"}
 STATEMENT_OR_ROUTINE_END = {"let", "if", "while", "do", "return", "}"}
 TERM_OPS = {'+', '-', '*', '/', '&', '|', '<', '>', '=', "&lt;", "&gt;", "&amp;"}
-KEYWORD_CONSTANT = {'true', 'false', 'null' , 'this'}
+KEYWORD_CONSTANT = {'true', 'false', 'null', 'this'}
 UNARY_OP = {'-', '~'}
 
 SYMBOLS = {'{', '}',

@@ -20,7 +20,8 @@ def compile_jack_program(input_file_path):
     compilation_engine = CompilationEngine(clean_input_str)
     print("class table\n", compilation_engine.get_symbol_table().get_class_table())
     print("last subroutine table\n", compilation_engine.get_symbol_table().get_subroutine_table())
-    return compilation_engine.get_output()
+    print("vm output\n", compilation_engine.get_vm_command_output())
+    return compilation_engine.get_vm_command_output()
 
 
 if __name__ == "__main__":
