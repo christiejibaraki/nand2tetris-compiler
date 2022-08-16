@@ -1,5 +1,5 @@
 """
-Utility functions
+I/O utility functions
 """
 import re
 

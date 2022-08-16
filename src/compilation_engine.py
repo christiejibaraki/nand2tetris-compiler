@@ -43,7 +43,7 @@ class CompilationEngine:
         self.__current_subroutine_type = None
         self.__current_subroutine_return_type = None
         self.__current_subroutine_n_locals = None  # number of local variables
-        self.__current_subroutine_args = None
+        self.__current_subroutine_args = None # number of args
 
         self.__xml_output = self._compile_class()
 
@@ -83,12 +83,12 @@ class CompilationEngine:
         output_str += self._validate_token_and_advance(
             {"class"}, "keyword class", current_offset)
 
-        # expect className identifier
+        # className identifier
         self.__current_class = self.__tokenizer.current_token()
         output_str += self._validate_type_and_advance(
             {IDENTIFIER_TAG}, "identifier", current_offset)
 
-        # expect {
+        # start class {
         output_str += self._validate_token_and_advance({"{"}, "{", current_offset)
 
         # optional class variable declarations
@@ -101,10 +101,10 @@ class CompilationEngine:
             if self.__tokenizer.current_token() in SUBROUTINE_DEC_SET:
                 output_str += self._compile_subroutine(current_offset)
 
-        # expect "}"
-        temp = "}"
+        # } end class
         if self.__tokenizer.current_token() != "}":
-            raise ValueError(f"Expecting {temp}, actual {self.__tokenizer.current_token()}")
+            raise ValueError(f"Expecting closing brace, "
+                             f"actual {self.__tokenizer.current_token()}")
 
         output_str += current_offset + self.__tokenizer.current_tag() + "\n"
         output_str += f"</{current_tag}>" + "\n"
@@ -120,7 +120,7 @@ class CompilationEngine:
         output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + OFFSET_CHAR
 
-        # guaranteed to be static or field
+        # Static or field
         output_str += new_offset + self.__tokenizer.current_tag() + "\n"
         static_or_field_kind = self.__tokenizer.current_token()
         self.__tokenizer.next()
@@ -148,14 +148,14 @@ class CompilationEngine:
         :param current_offset: (str) tab for parent tag
         :return: (str) xml for class var dec
         """
-        # init new subroutine
+        # init new subroutine, rest relevant fields
         self._reset_subroutine_properties()
 
         current_tag = "subroutineDec"
         output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + OFFSET_CHAR
 
-        # guaranteed to be constructor, function, or method
+        # constructor, function, or method
         self.__current_subroutine_type = self.__tokenizer.current_token()
         if self.__current_subroutine_type == "method":
             # if subroutine is a method, add this to subroutine symbol table
@@ -164,26 +164,25 @@ class CompilationEngine:
         output_str += new_offset + self.__tokenizer.current_tag() + "\n"
         self.__tokenizer.next()
 
-        # expect void or type (int, char, boolean, classname)
+        # return type: void or type (int, char, boolean, classname)
         self.__current_subroutine_return_type = self.__tokenizer.current_token()
         output_str += self._validate_type_and_advance({KEYWORD_TAG, IDENTIFIER_TAG},
                                                       "keyword or identifier", new_offset)
 
-        # expect a subroutine name
+        # subroutine name
         self.__current_subroutine_name = self.__tokenizer.current_token()
         self.__vm_writer.write_comment(self.__current_subroutine_name +
                                        f" ; return: {self.__current_subroutine_return_type}")
         output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "subroutine name",
                                                       new_offset)
-        # expect (
+        # start param list (
         output_str += self._validate_token_and_advance({"("}, "(", new_offset)
         # parameter list, helper function adds params to subroutine symbol table
         output_str += self._compile_paramater_list(new_offset)
-        # expect )
+        # ) end param list
         output_str += self._validate_token_and_advance({")"}, ")", new_offset)
 
-        # expect {
-        # subroutineBody
+        # start subroutine body {
         if self.__tokenizer.current_token() == "{":
             output_str += self._compile_subroutine_body(new_offset)
         else:
@@ -202,6 +201,7 @@ class CompilationEngine:
         output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + OFFSET_CHAR
 
+        # compile comma separated list of type varName
         while self.__tokenizer.current_token() != ")":
             if self.__tokenizer.current_token() == ",":
                 output_str += self._validate_token_and_advance({","}, ",", new_offset)
@@ -228,7 +228,7 @@ class CompilationEngine:
         output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + OFFSET_CHAR
 
-        # guaranteed to be "{"
+        # start body {
         output_str += new_offset + self.__tokenizer.current_tag() + "\n"
         self.__tokenizer.next()
 
@@ -258,7 +258,7 @@ class CompilationEngine:
         while self.__tokenizer.current_token() != "}":
             output_str += self._compile_statements(new_offset)
 
-        # guaranteed to be "}"
+        # } end body
         output_str += new_offset + self.__tokenizer.current_tag() + "\n"
         self.__tokenizer.next()
 
@@ -276,7 +276,7 @@ class CompilationEngine:
         output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + OFFSET_CHAR
 
-        # guaranteed to be var
+        # var declartion
         output_str += new_offset + self.__tokenizer.current_tag() + "\n"
         self.__tokenizer.next()
         # type varName (,varName)*, add variables to subroutine table
@@ -331,16 +331,15 @@ class CompilationEngine:
         output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + OFFSET_CHAR
 
-        # guaranteed to be do
+        # do
         output_str += new_offset + self.__tokenizer.current_tag() + "\n"
         self.__tokenizer.next()
         # subroutine call
         output_str += self._compile_subroutine_call(new_offset)
-        # expect ;
+        # ;
         output_str += self._validate_token_and_advance({";"}, ";", new_offset)
 
-        # TODO: not sure if I need to do this elsewhere too. compile_term?
-        # no return so pop 0
+        # no return in a do statement, so pop 0
         self.__vm_writer.write_pop_command(TEMP_SEGMENT, 0)
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
@@ -356,10 +355,10 @@ class CompilationEngine:
         output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + OFFSET_CHAR
 
-        # guaranteed to be let
+        # let
         output_str += new_offset + self.__tokenizer.current_tag() + "\n"
         self.__tokenizer.next()
-        # expecting varname, could be name of an array
+        # varName (possible name of array)
         is_array = False
         target_var = self.__tokenizer.current_token()
         output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "identifier",
@@ -380,11 +379,11 @@ class CompilationEngine:
             self.__vm_writer.write_pop_command(TEMP_SEGMENT, 1)
 
         # vm: push expression on stack
-        # expect "="
+        # =
         output_str += self._validate_token_and_advance({"="}, "=", new_offset)
-        # expect expression
+        # expression
         output_str += self._compile_expression(new_offset, {";"})
-        # expect ;
+        # ;
         output_str += self._validate_token_and_advance({";"}, ";", new_offset)
 
         # if target is an array,
@@ -414,7 +413,7 @@ class CompilationEngine:
         l1 = self._get_unique_while_label()
         l2 = self._get_unique_while_label()
 
-        # guaranteed to be while
+        # while
         output_str += new_offset + self.__tokenizer.current_tag() + "\n"
         self.__tokenizer.next()
 
@@ -422,24 +421,24 @@ class CompilationEngine:
         self.__vm_writer.write_label_command(l1)
 
         # compile expression
-        # expect (
+        # start condition (
         output_str += self._validate_token_and_advance({"("}, ")", new_offset)
         # expression
         output_str += self._compile_expression(new_offset, {")"})
-        # expect )
+        # ) end condition
         output_str += self._validate_token_and_advance({")"}, ")", new_offset)
 
-        # vm: not the expression
+        # vm: NOT the expression
         self.__vm_writer.write_arithmetic_command("not")
         # vm: if expression not true jump to L2
         self.__vm_writer.write_if_command(l2)
 
         # compile statements
-        # expect {
+        # start statements {
         output_str += self._validate_token_and_advance({"{"}, "{", new_offset)
         # optional statements
         output_str += self._compile_statements(new_offset)
-        # guaranteed to be }
+        # } end statements
         output_str += new_offset + self.__tokenizer.current_tag() + "\n"
         self.__tokenizer.next()
 
@@ -461,13 +460,13 @@ class CompilationEngine:
         output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + OFFSET_CHAR
 
-        # guaranteed to be return
+        # return
         output_str += new_offset + self.__tokenizer.current_tag() + "\n"
         self.__tokenizer.next()
-        # if not empty return, expression
+        # expression unless void return
         if self.__tokenizer.current_token() != ";":
             output_str += self._compile_expression(new_offset, {";"})
-        # expect ;
+        # ;
         output_str += self._validate_token_and_advance({";"}, ";", new_offset)
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
@@ -493,29 +492,29 @@ class CompilationEngine:
         l1 = self._get_unique_if_label()
         l2 = self._get_unique_if_label()
 
-        # guaranteed to be if
+        # if
         output_str += new_offset + self.__tokenizer.current_tag() + "\n"
         self.__tokenizer.next()
 
-        # compile the expression and put it on stack
-        # expect (
+        # compile the condition and put it on stack
+        # start condition (
         output_str += self._validate_token_and_advance({"("}, ")", new_offset)
         # expression
         output_str += self._compile_expression(new_offset, {")"})
-        # expect )
+        # ) end condition
         output_str += self._validate_token_and_advance({")"}, ")", new_offset)
 
-        # vm: not the expression - if the expression was true (-1) it is now 0
+        # vm: NOT the expression - if the expression was true (-1) it is now 0
         self.__vm_writer.write_arithmetic_command("not")
         # vm: jump to l1 if expression not equal to zero (i.e. not true)
         self.__vm_writer.write_if_command(l1)
 
         # compile statements 1 (for true) and put it on the stack
-        # expect {
+        # {
         output_str += self._validate_token_and_advance({"{"}, "{", new_offset)
         # optional statements
         output_str += self._compile_statements(new_offset)
-        # guaranteed to be }
+        # }
         output_str += new_offset + self.__tokenizer.current_tag() + "\n"
         self.__tokenizer.next()
 
@@ -529,11 +528,11 @@ class CompilationEngine:
         if self.__tokenizer.current_token() == "else":
             output_str += new_offset + self.__tokenizer.current_tag() + "\n"
             self.__tokenizer.next()
-            # expect {
+            # {
             output_str += self._validate_token_and_advance({"{"}, "{", new_offset)
             # optional statements
             output_str += self._compile_statements(new_offset)
-            # guaranteed to be }
+            # }
             output_str += new_offset + self.__tokenizer.current_tag() + "\n"
             self.__tokenizer.next()
 
@@ -584,7 +583,7 @@ class CompilationEngine:
             output_str += self._compile_term(new_offset)
             # check for other terms
             while self.__tokenizer.current_token() not in stop_chars:
-                # expect op
+                # operator
                 operator = self.__tokenizer.current_token()
                 output_str += self._validate_token_and_advance(TERM_OPS, "operator", new_offset)
                 # followed by a term, which gets put on stack first
@@ -619,7 +618,6 @@ class CompilationEngine:
             self.__tokenizer.next()
         # (3) unary operator followed by term
         elif self.__tokenizer.current_token() in UNARY_OP:
-            # write operator
             unary_operator = self.__tokenizer.current_token()
             output_str += new_offset + self.__tokenizer.current_tag() + "\n"
             self.__tokenizer.next()
@@ -628,17 +626,17 @@ class CompilationEngine:
             self.__vm_writer.write_unary_op(unary_operator)
         # (4) if char is "(" then expect: ( expression )
         elif self.__tokenizer.current_token() == "(":
-            # write (
+            # (
             output_str += new_offset + self.__tokenizer.current_tag() + "\n"
             self.__tokenizer.next()
             output_str += self._compile_expression(new_offset, {")"})
-            # write )
+            # )
             output_str += new_offset + self.__tokenizer.current_tag() + "\n"
             self.__tokenizer.next()
         # otherwise need to distinguish between:
         #  variable, an array entry, and a subroutine call
         else:
-            # expect an identifier
+            # identifier
             if self.__tokenizer.current_type() != IDENTIFIER_TAG:
                 raise ValueError(f"Expecting identifer, actual {self.__tokenizer.current_type()}")
             # look ahead
@@ -652,12 +650,12 @@ class CompilationEngine:
                 output_str += self._validate_type_and_advance({IDENTIFIER_TAG},
                                                               "identifier", new_offset)
                 # push index of array
-                # write [
+                # [
                 output_str += new_offset + self.__tokenizer.current_tag() + "\n"
                 self.__tokenizer.next()
                 # expression
                 output_str += self._compile_expression(new_offset, {"]"})
-                # write ]
+                # ]
                 output_str += new_offset + self.__tokenizer.current_tag() + "\n"
                 self.__tokenizer.next()
 
@@ -748,11 +746,11 @@ class CompilationEngine:
         :param is_class_var: (boolean) if true class var, else subroutine var
         """
         output_str = ""
-        # expect a variable type (either a keyword or identifier)
+        # a variable type (either a keyword or identifier)
         var_type = self.__tokenizer.current_token()
         output_str += self._validate_type_and_advance({KEYWORD_TAG, IDENTIFIER_TAG},
                                                       "keyword or identifier", offset)
-        # expect at least one variable name
+        # at least one variable name
         self._add_var_to_symbol_table(self.__tokenizer.current_token(),
                                       var_type, var_kind, DECLARING, is_class_var)
         output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "variable name",
@@ -777,7 +775,7 @@ class CompilationEngine:
             else:
                 raise ValueError(
                     f"Expecting variable name, actual: {self.__tokenizer.current_token()}")
-        # guaranteed to be ;
+        # ;
         output_str += offset + self.__tokenizer.current_tag() + "\n"
         self.__tokenizer.next()
         return output_str
@@ -797,7 +795,7 @@ class CompilationEngine:
         self.__current_subroutine_args = 0
 
         output_str = ""
-        # expect a subroutine name OR (class or variable name)
+        # subroutine name OR (class or variable name)
         name_1 = self.__tokenizer.current_token()
         output_str += self._validate_type_and_advance({IDENTIFIER_TAG}, "identifier",
                                                       offset)

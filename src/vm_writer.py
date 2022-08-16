@@ -1,6 +1,6 @@
 """
 VM Writer Module
-Output module for generating VM code
+Generates VM code
 """
 from grammar_utility import \
     STRING_CONSTANT_TAG, INTEGER_CONSTANT_TAG, KEYWORD_CONSTANT

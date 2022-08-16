@@ -132,6 +132,7 @@ class Tokenizer:
                 token_type = SYMBOL_TAG
             elif token == Tokenizer.STRING_LITERAL_SUB:
                 string_literal = self.__string_literals.pop(0)[1:-1]
+                # replace the value of the token with the actual string
                 token = string_literal
                 xml_tag = create_tag(STRING_CONSTANT_TAG, string_literal)
                 token_type = STRING_CONSTANT_TAG

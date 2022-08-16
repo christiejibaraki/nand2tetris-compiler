@@ -14,7 +14,7 @@ USING = "using"
 
 class SymbolTable:
     """
-    Identifier table
+    Identifier tables for both class and subroutine scopes
     """
 
     def __init__(self):
@@ -23,7 +23,7 @@ class SymbolTable:
 
     def new_subroutine(self):
         """
-        Create empty \table for a new subroutine
+        Create empty table for a new subroutine
         :return: NA, overwrite self.__subroutine_table
         """
         self.__subroutine_table = SingleTable()

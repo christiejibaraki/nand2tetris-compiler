@@ -1,7 +1,9 @@
 """
 Lexical elements of Jack language
+For parsing program to XML
 """
 
+# XML Tags
 KEYWORD_TAG = "keyword"
 IDENTIFIER_TAG = "identifier"
 SYMBOL_TAG = "symbol"
@@ -52,7 +54,7 @@ KEYWORDS = {'class',
 
 def create_tag(tag_type, token):
     """
-    Create start and end tags for token
+    Create start and end XML tags for token
     :param tag_type: (str) tag
     :param token: (str) token tag
     :return: (str) tagged token: "<type> token </type>"
