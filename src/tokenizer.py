@@ -131,8 +131,9 @@ class Tokenizer:
                 xml_tag = create_tag(SYMBOL_TAG, token)
                 token_type = SYMBOL_TAG
             elif token == Tokenizer.STRING_LITERAL_SUB:
-                string_literal = self.__string_literals.pop(0)
-                xml_tag = create_tag(STRING_CONSTANT_TAG, string_literal[1:-1])
+                string_literal = self.__string_literals.pop(0)[1:-1]
+                token = string_literal
+                xml_tag = create_tag(STRING_CONSTANT_TAG, string_literal)
                 token_type = STRING_CONSTANT_TAG
             elif token[0].isdigit():
                 try:

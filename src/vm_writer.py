@@ -79,7 +79,13 @@ class VMWriter:
             self.write_push_command(CONSTANT_SEGMENT, token)
         # string constant
         elif token_type == STRING_CONSTANT_TAG:
-            pass
+            self.write_comment(f"string constant: {token}")
+            string_length = len(token)
+            self.write_push_command(CONSTANT_SEGMENT, string_length)
+            self.write_call_command("String.new", 1)
+            for i in range(string_length):
+                self.write_push_command(CONSTANT_SEGMENT, ord(token[i]))
+                self.write_call_command("String.appendChar", 2)
         # keyword constant
         elif token in KEYWORD_CONSTANT:
             if token == "this":
