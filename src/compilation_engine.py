@@ -43,7 +43,6 @@ class CompilationEngine:
         self.__current_subroutine_type = None
         self.__current_subroutine_return_type = None
         self.__current_subroutine_n_locals = None  # number of local variables
-        self.__current_subroutine_args = None # number of args
 
         self.__xml_output = self._compile_class()
 
@@ -67,6 +66,9 @@ class CompilationEngine:
         :return: (SymbolTable)
         """
         return self.__symbol_table
+
+    def get_tokenizer(self):
+        return self.__tokenizer
 
     """
     Program structure methods
@@ -556,17 +558,17 @@ class CompilationEngine:
         current_tag = "expressionList"
         output_str = current_offset + f"<{current_tag}>" + "\n"
         new_offset = current_offset + OFFSET_CHAR
-
+        subroutine_args = 0
         # compile expressions until hit ")"
         while self.__tokenizer.current_token() != ")":
             if self.__tokenizer.current_token() == ",":
                 output_str += self._validate_token_and_advance({","}, ",", new_offset)
                 continue
-            self.__current_subroutine_args += 1
+            subroutine_args += 1
             output_str += self._compile_expression(new_offset, {",", ")"})
 
         output_str += current_offset + f"</{current_tag}>" + "\n"
-        return output_str
+        return output_str, subroutine_args
 
     def _compile_expression(self, current_offset, stop_chars):
         """
@@ -792,7 +794,7 @@ class CompilationEngine:
         :return: NA
         """
         # for vm writer
-        self.__current_subroutine_args = 0
+        subroutine_args = 0
 
         output_str = ""
         # subroutine name OR (class or variable name)
@@ -809,7 +811,7 @@ class CompilationEngine:
             if self.__symbol_table.contains(name_1):
                 self.__vm_writer.write_push_command(self.__symbol_table.get_kind(name_1),
                                                     self.__symbol_table.get_index(name_1))
-                self.__current_subroutine_args += 1
+                subroutine_args += 1
                 # the name of the class followed by the subroutine
                 subroutine_call_name = f"{self.__symbol_table.get_type(name_1)}." \
                                        f"{self.__tokenizer.current_token()}"
@@ -822,17 +824,19 @@ class CompilationEngine:
             # push instance as first arg (pointer 0)
             subroutine_call_name = f"{self.__current_class}.{name_1}"
             self.__vm_writer.write_push_command(POINTER_SEGMENT, 0)  # THIS
-            self.__current_subroutine_args += 1
+            subroutine_args += 1
 
         # compile expression list which counts the subroutine args
         # expect "(", followed by an expression list, and ")"
         # puts the arguments on the stack and increments # args
         output_str += self._validate_token_and_advance({"("}, "(", offset)
-        output_str += self._compile_expression_list(offset)
+        xml, additional_subroutine_args = self._compile_expression_list(offset)
+        output_str += xml
         # guaranteed to be )
 
         # vm: write call the subroutine
-        self.__vm_writer.write_call_command(subroutine_call_name, self.__current_subroutine_args)
+        subroutine_args += additional_subroutine_args
+        self.__vm_writer.write_call_command(subroutine_call_name, subroutine_args)
 
         output_str += offset + self.__tokenizer.current_tag() + "\n"
         self.__tokenizer.next()
