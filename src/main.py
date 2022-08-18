@@ -1,6 +1,6 @@
 """
 Main module
-Runs first part of compiler, the Jack "Analyzer"
+Runs compiler
 """
 import sys
 import os
